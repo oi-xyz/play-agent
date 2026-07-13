@@ -1,0 +1,39 @@
+{
+  "name": "play-agent",
+  "version": "0.1.0",
+  "description": "Turn substantial agent work and independent reviews into inspectable reasoning maps inside Codex.",
+  "author": {
+    "name": "OI XYZ",
+    "url": "https://github.com/oi-xyz"
+  },
+  "homepage": "https://github.com/oi-xyz/play-agent#readme",
+  "repository": "https://github.com/oi-xyz/play-agent",
+  "keywords": [
+    "codex",
+    "review",
+    "reasoning map",
+    "evidence",
+    "decision"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Play Agent",
+    "shortDescription": "Inspect evidence, decisions, risks, and handoffs as a work map",
+    "longDescription": "Play Agent adds a stateless MCP work map and focused workflows for mapping substantial results and independently reviewing implementation checkpoints without replacing Codex as the agent or conversation surface.",
+    "developerName": "OI XYZ",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive"
+    ],
+    "websiteURL": "https://github.com/oi-xyz/play-agent",
+    "defaultPrompt": [
+      "Map this result so I can inspect the reasoning.",
+      "Independently review this implementation checkpoint.",
+      "Show the evidence, risks, decision, and next actions."
+    ],
+    "brandColor": "#C43CFF",
+    "composerIcon": "./assets/logo.svg",
+    "logo": "./assets/logo.svg"
+  },
+  "mcpServers": "./.mcp.json"
+}

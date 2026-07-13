@@ -1,0 +1,4 @@
+interface:
+  display_name: "Map substantial work"
+  short_description: "Turn connected reasoning into a reviewable work map"
+  default_prompt: "Map this result so I can inspect its evidence, decisions, risks, and next actions."

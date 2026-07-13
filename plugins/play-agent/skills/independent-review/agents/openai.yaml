@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review independently"
+  short_description: "Review a checkpoint without implementer self-verification"
+  default_prompt: "Independently review this checkpoint and present the findings as a work map."

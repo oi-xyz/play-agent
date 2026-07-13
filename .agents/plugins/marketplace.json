@@ -1,0 +1,20 @@
+{
+  "name": "oi-xyz",
+  "interface": {
+    "displayName": "OI XYZ"
+  },
+  "plugins": [
+    {
+      "name": "play-agent",
+      "source": {
+        "source": "local",
+        "path": "./plugins/play-agent"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
