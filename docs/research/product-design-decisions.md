@@ -24,7 +24,7 @@ Qualitative confidence is limited to `claim`, `assumption`, and `lesson`, where 
 
 ## Work Map Only
 
-The MCP App contains the map, map controls, and a temporary node detail overlay. A single node click selects it and automatically lays out its direct relationship neighborhood; `View details` opens the complete content separately. Nodes are not manually draggable, and reset returns to the deterministic global layout. The App does not contain a Selected Node sidebar, database inspector, form editor, or parallel chat UI.
+The MCP App contains the map, map controls, and a temporary node detail overlay. A single node click highlights its direct relationship neighborhood without hiding nodes, changing layout, or moving the viewport. `View details` opens complete content without replacing the current relationship selection. Nodes are not manually draggable, and reset clears the selection and restores the deterministic global view. The App does not contain a Selected Node sidebar, database inspector, form editor, or parallel chat UI.
 
 ## Host-Native Follow-Up
 

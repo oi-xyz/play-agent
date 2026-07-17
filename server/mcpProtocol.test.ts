@@ -223,12 +223,14 @@ test('resources/read returns the focused Work Map app HTML', async () => {
   assert.match(html, /reference\.uri \|\| reference\.locator/);
   assert.match(html, /I reject this reviewer finding/);
   assert.match(html, /References/);
-  assert.match(html, /Reset layout/);
-  assert.match(html, /function resetLayout/);
+  assert.match(html, /Reset view/);
+  assert.match(html, /function resetView/);
   assert.match(html, /data-details-id/);
-  assert.match(html, /function applyFocusedLayout/);
+  assert.match(html, /let detailNodeId = null/);
+  assert.match(html, /function renderFocus\(node\) \{\s+detailNodeId = node\.id/);
+  assert.match(html, /function visibleNodes\(\) \{\s+return filteredNodes\(\)/);
+  assert.match(html, /relatedIds\.has\(node\.id\) \? ' is-related' : ' is-muted'/);
   assert.match(html, /function initialView/);
-  assert.match(html, /function focusedView/);
   assert.match(html, /function readableOverview/);
   assert.match(html, /MIN_READABLE_ZOOM = \.64/);
   assert.match(html, /VERTICAL_GRAPH_BREAKPOINT = 520/);
@@ -242,6 +244,8 @@ test('resources/read returns the focused Work Map app HTML', async () => {
   assert.match(html, /canvas\.scrollLeft = 0/);
   assert.match(html, /\.focus-footer\[hidden\]/);
   assert.doesNotMatch(html, /nodeDragState/);
+  assert.doesNotMatch(html, /function applyFocusedLayout/);
+  assert.doesNotMatch(html, /function focusedView/);
   assert.doesNotMatch(html, /kindFilterElement/);
   assert.doesNotMatch(html, /id="legend"/);
   assert.match(html, /grid-template-rows: auto minmax\(0, 1fr\) auto/);

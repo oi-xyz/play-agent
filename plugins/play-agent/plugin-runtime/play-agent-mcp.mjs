@@ -16787,7 +16787,22 @@ function workMapAppHtml() {
       opacity: 1;
     }
 
-    .node.is-muted { opacity: .16; }
+    .node.is-related {
+      border-color: color-mix(in srgb, var(--accent) 44%, var(--border));
+      background: color-mix(in srgb, var(--accent) 3%, var(--surface));
+      box-shadow: var(--shadow-med);
+      opacity: 1;
+    }
+
+    .node.is-muted {
+      opacity: .32;
+      filter: saturate(.58);
+    }
+
+    .node.is-muted:hover {
+      opacity: .72;
+      filter: saturate(.86);
+    }
 
     .node.is-type-match {
       border-color: color-mix(in srgb, var(--kind-color) 48%, var(--border));
@@ -16801,6 +16816,11 @@ function workMapAppHtml() {
     }
 
     .node.is-selected.is-type-context {
+      opacity: 1;
+      filter: none;
+    }
+
+    .node.is-related.is-type-context {
       opacity: 1;
       filter: none;
     }
@@ -17266,7 +17286,7 @@ function workMapAppHtml() {
         </div>
       </div>
       <div class="toolbar-actions" aria-label="Map actions">
-        <button id="reset-layout" class="icon-button" type="button" title="Reset layout" aria-label="Reset node layout">
+        <button id="reset-view" class="icon-button" type="button" title="Reset view" aria-label="Reset map view">
           <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/><path d="M10 7h4M7 10v4M17 10v4M10 17h4"/></svg>
         </button>
         <button id="fit-view" class="icon-button" type="button" title="Fit all nodes" aria-label="Fit all nodes">
@@ -17402,6 +17422,7 @@ function workMapAppHtml() {
     let renderedSnapshotId = null;
     let transform = {x: 0, y: 0, scale: 1};
     let selectedNodeId = null;
+    let detailNodeId = null;
     let dragState = null;
     let nodePositions = new Map();
     let highlightedKinds = new Set();
@@ -17464,14 +17485,17 @@ function workMapAppHtml() {
     }
 
     function visibleNodes() {
-      const nodes = filteredNodes();
-      if (!selectedNodeId) return nodes;
-      const relatedIds = new Set([selectedNodeId]);
+      return filteredNodes();
+    }
+
+    function relatedNodeIds(nodeId) {
+      if (!nodeId) return new Set();
+      const relatedIds = new Set([nodeId]);
       (snapshot?.edges || []).forEach(function (edge) {
-        if (edge.from === selectedNodeId) relatedIds.add(edge.to);
-        if (edge.to === selectedNodeId) relatedIds.add(edge.from);
+        if (edge.from === nodeId) relatedIds.add(edge.to);
+        if (edge.to === nodeId) relatedIds.add(edge.from);
       });
-      return nodes.filter(function (node) { return relatedIds.has(node.id); });
+      return relatedIds;
     }
 
     function visibleGraph() {
@@ -17500,59 +17524,6 @@ function workMapAppHtml() {
       return new Map((snapshot?.nodes || []).map(function (node) {
         return [node.id, {x: node.position.x, y: node.position.y}];
       }));
-    }
-
-    function applyFocusedLayout(nodes) {
-      nodePositions = globalPositions();
-      if (!selectedNodeId) return;
-      const visibleIds = new Set(nodes.map(function (node) { return node.id; }));
-      const incoming = [];
-      const outgoing = [];
-      const placed = new Set([selectedNodeId]);
-      (snapshot?.edges || []).forEach(function (edge) {
-        if (edge.to === selectedNodeId && visibleIds.has(edge.from) && !placed.has(edge.from)) {
-          incoming.push(edge.from);
-          placed.add(edge.from);
-        }
-        if (edge.from === selectedNodeId && visibleIds.has(edge.to) && !placed.has(edge.to)) {
-          outgoing.push(edge.to);
-          placed.add(edge.to);
-        }
-      });
-      nodes.forEach(function (node) {
-        if (placed.has(node.id)) return;
-        outgoing.push(node.id);
-        placed.add(node.id);
-      });
-
-      const rowGap = 56;
-      const rowStep = NODE_HEIGHT + rowGap;
-      if (canvas.getBoundingClientRect().width <= VERTICAL_GRAPH_BREAKPOINT) {
-        const mobileX = 56;
-        incoming.forEach(function (id, index) {
-          nodePositions.set(id, {x: mobileX + index % 2 * 24, y: 56 + index * rowStep});
-        });
-        const selectedY = 56 + incoming.length * rowStep;
-        nodePositions.set(selectedNodeId, {x: mobileX, y: selectedY});
-        outgoing.forEach(function (id, index) {
-          nodePositions.set(id, {x: mobileX + index % 2 * 24, y: selectedY + (index + 1) * rowStep});
-        });
-        return;
-      }
-
-      const columnGap = 164;
-      const leftX = 56;
-      const centerX = leftX + NODE_WIDTH + columnGap;
-      const rightX = centerX + NODE_WIDTH + columnGap;
-      const rowCount = Math.max(1, incoming.length, outgoing.length);
-      const centerY = 56 + (rowCount - 1) * rowStep / 2;
-      nodePositions.set(selectedNodeId, {x: centerX, y: centerY});
-      incoming.forEach(function (id, index) {
-        nodePositions.set(id, {x: leftX, y: 56 + index * rowStep});
-      });
-      outgoing.forEach(function (id, index) {
-        nodePositions.set(id, {x: rightX, y: 56 + index * rowStep});
-      });
     }
 
     function edgeGeometry(edge) {
@@ -17658,11 +17629,14 @@ function workMapAppHtml() {
     function renderGraph() {
       if (!snapshot) return;
       const graph = visibleGraph();
-      applyFocusedLayout(graph.nodes);
+      const relatedIds = relatedNodeIds(selectedNodeId);
 
       nodesElement.innerHTML = graph.nodes.map(function (node) {
         const position = nodePosition(node);
         const selected = selectedNodeId === node.id ? ' is-selected' : '';
+        const relationshipState = !selectedNodeId || selected
+          ? ''
+          : relatedIds.has(node.id) ? ' is-related' : ' is-muted';
         const typeState = highlightedKinds.size === 0
           ? ''
           : highlightedKinds.has(node.kind) ? ' is-type-match' : ' is-type-context';
@@ -17673,7 +17647,7 @@ function workMapAppHtml() {
           ? '<div class="confidence-note ' + (node.confidence === 'low' ? 'low' : '') + '"><span>' + escapeHtml(node.uncertaintyReasons[0]) + '</span></div>'
           : '';
         const uncertaintyClass = firstUncertainty ? ' has-uncertainty' : '';
-        return '<article class="node ' + escapeHtml(node.kind) + selected + typeState + uncertaintyClass + '" tabindex="0" data-node-id="' + escapeHtml(node.id) + '" data-origin="' + escapeHtml(node.origin) + '" aria-label="Select node: ' + escapeHtml(node.title) + '" style="left:' + position.x + 'px;top:' + position.y + 'px">' +
+        return '<article class="node ' + escapeHtml(node.kind) + selected + relationshipState + typeState + uncertaintyClass + '" tabindex="0" data-node-id="' + escapeHtml(node.id) + '" data-origin="' + escapeHtml(node.origin) + '" aria-label="Select node: ' + escapeHtml(node.title) + '" style="left:' + position.x + 'px;top:' + position.y + 'px">' +
           '<div class="node-header"><span class="kind-label">' + escapeHtml(displayLabel(node.kind)) + '</span>' + confidenceBadge(node) + '<span class="origin-label origin-' + escapeHtml(node.origin) + '">' + escapeHtml(displayLabel(node.origin)) + '</span></div>' +
           '<div class="node-copy"><h2>' + escapeHtml(node.title) + '</h2><p>' + escapeHtml(node.body) + '</p>' + firstUncertainty + '</div>' +
           '<div class="node-footer">' + references + '<button class="node-details-button" type="button" data-details-id="' + escapeHtml(node.id) + '">Details<svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button></div>' +
@@ -17765,24 +17739,10 @@ function workMapAppHtml() {
       readableOverview(nodes);
     }
 
-    function focusedView() {
-      const selected = nodeById(selectedNodeId);
-      const rect = canvas.getBoundingClientRect();
-      const nodes = visibleNodes();
-      if (!selected) {
-        fitView();
-        return;
-      }
-      if (fittedScale(nodes) >= MIN_READABLE_ZOOM) {
-        fitView();
-        return;
-      }
-      centerReadable(selected, rect.width <= VERTICAL_GRAPH_BREAKPOINT ? .68 : .78);
-    }
-
-    function resetLayout() {
+    function resetView() {
       if (!snapshot) return;
       focusLayer.hidden = true;
+      detailNodeId = null;
       selectedNodeId = null;
       nodePositions = globalPositions();
       updateMeta();
@@ -17815,8 +17775,7 @@ function workMapAppHtml() {
     }
 
     function renderFocus(node) {
-      selectedNodeId = node.id;
-      updateMeta();
+      detailNodeId = node.id;
       focusCard.className = 'focus-card ' + node.kind;
       document.getElementById('focus-kind').textContent = displayLabel(node.kind);
       const origin = document.getElementById('focus-origin');
@@ -17874,21 +17833,20 @@ function workMapAppHtml() {
         button.hidden = node.origin === 'reviewer';
       });
       focusLayer.hidden = false;
-      renderGraph();
       document.getElementById('close-focus').focus();
     }
 
     function closeFocus() {
       focusLayer.hidden = true;
-      renderGraph();
+      detailNodeId = null;
     }
 
     function selectNode(node) {
       focusLayer.hidden = true;
-      selectedNodeId = node.id;
+      detailNodeId = null;
+      selectedNodeId = selectedNodeId === node.id ? null : node.id;
       updateMeta();
       renderGraph();
-      requestAnimationFrame(focusedView);
     }
 
     function followUpPrompt(action, node) {
@@ -17942,8 +17900,8 @@ function workMapAppHtml() {
       if (!snapshot) return;
       if (selectedNodeId) {
         const selected = nodeById(selectedNodeId);
-        const relatedCount = Math.max(0, visibleNodes().length - 1);
-        metaElement.textContent = 'Focused on ' + (selected?.title || 'node') + ' \xB7 ' + relatedCount + ' related';
+        const relatedCount = Math.max(0, relatedNodeIds(selectedNodeId).size - 1);
+        metaElement.textContent = 'Highlighting ' + (selected?.title || 'node') + ' \xB7 ' + relatedCount + ' related';
         return;
       }
       const countText = snapshot.nodes.length + ' nodes \xB7 ' + snapshot.edges.length + ' relationships';
@@ -17955,6 +17913,7 @@ function workMapAppHtml() {
       snapshot = nextSnapshot;
       renderedSnapshotId = nextSnapshot.id || null;
       selectedNodeId = null;
+      detailNodeId = null;
       highlightedKinds = new Set();
       nodePositions = globalPositions();
       titleElement.textContent = nextSnapshot.title || 'Work Map';
@@ -17969,6 +17928,7 @@ function workMapAppHtml() {
 
     function refreshGraph() {
       focusLayer.hidden = true;
+      detailNodeId = null;
       selectedNodeId = null;
       nodePositions = globalPositions();
       updateMeta();
@@ -18002,15 +17962,15 @@ function workMapAppHtml() {
     focusLayer.addEventListener('click', function (event) {
       if (event.target === focusLayer) closeFocus();
       const referenceButton = event.target.closest('[data-reference-index]');
-      if (referenceButton && selectedNodeId) {
-        const reference = nodeById(selectedNodeId)?.references?.[Number(referenceButton.getAttribute('data-reference-index'))];
+      if (referenceButton && detailNodeId) {
+        const reference = nodeById(detailNodeId)?.references?.[Number(referenceButton.getAttribute('data-reference-index'))];
         if (reference?.uri && typeof window.openai?.openExternal === 'function') {
           window.openai.openExternal({href: reference.uri, redirectUrl: false});
         }
       }
       const actionButton = event.target.closest('[data-action]');
-      if (actionButton && selectedNodeId && typeof window.openai?.sendFollowUpMessage === 'function') {
-        const node = nodeById(selectedNodeId);
+      if (actionButton && detailNodeId && typeof window.openai?.sendFollowUpMessage === 'function') {
+        const node = nodeById(detailNodeId);
         if (node) window.openai.sendFollowUpMessage({prompt: followUpPrompt(actionButton.getAttribute('data-action'), node), scrollToBottom: true});
       }
     });
@@ -18024,6 +17984,11 @@ function workMapAppHtml() {
         return;
       }
       if (!focusLayer.hidden) closeFocus();
+      else if (selectedNodeId) {
+        selectedNodeId = null;
+        updateMeta();
+        renderGraph();
+      }
     });
     searchElement.addEventListener('input', refreshGraph);
     typeFilterTrigger.addEventListener('click', function () {
@@ -18048,7 +18013,7 @@ function workMapAppHtml() {
       if (!typeFilter.contains(event.target)) setTypeMenuOpen(false);
     });
     document.getElementById('fit-view').addEventListener('click', fitView);
-    document.getElementById('reset-layout').addEventListener('click', resetLayout);
+    document.getElementById('reset-view').addEventListener('click', resetView);
     document.getElementById('zoom-in').addEventListener('click', function () {
       const rect = canvas.getBoundingClientRect();
       setZoom(transform.scale * 1.18, rect.width / 2, rect.height / 2);

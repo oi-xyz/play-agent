@@ -149,9 +149,9 @@ The App contains only the Work Map surface. It provides:
 
 - smooth, directed, labeled edges and deterministic Dagre layout;
 - search, multi-type highlighting with relationship context, fit view, zoom, and pan;
-- single-click relationship focus that automatically lays out the selected node with its direct neighbors;
-- an explicit `View details` action, separate from node selection;
-- global layout reset; nodes are not manually draggable;
+- single-click relationship highlighting that preserves the full map and its deterministic global layout;
+- an explicit `View details` action that does not replace the current relationship selection;
+- view reset; nodes are not manually draggable;
 - provenance visible on every node;
 - a map-local focus overlay with complete node content, relationships, and references;
 - qualitative confidence on claims, assumptions, and lessons, including visible reasons when confidence is not high;
@@ -176,6 +176,17 @@ codex plugin add play-agent@oi-xyz
 ```
 
 Start a new Codex task after installation so its skills and bundled MCP server are discovered. Ask Codex to map substantial work directly, or invoke one of the plugin skills with `@`.
+
+## Update
+
+Refresh the public marketplace snapshot, then reinstall Play Agent from it:
+
+```bash
+codex plugin marketplace upgrade oi-xyz
+codex plugin add play-agent@oi-xyz
+```
+
+Start a new Codex task after updating so the task loads the new skills, MCP server, and App resource.
 
 ## Development
 

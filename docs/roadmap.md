@@ -11,9 +11,9 @@ Play Agent is a stateless MCP tool plus MCP App for presenting reviewable reason
 - Verifiable node references with URI or locator.
 - Qualitative confidence for inferential nodes, with explicit reasons when confidence is not high.
 - Deterministic snapshot ID and Dagre layout.
-- Work Map-only MCP App with search, multi-type contextual highlighting, pan, zoom, fit view, relationship focus, and global layout reset.
+- Work Map-only MCP App with search, multi-type contextual highlighting, pan, zoom, fit view, relationship highlighting, and view reset.
 - Readable large-map entry view and a navigable minimap so fit-all is optional rather than the unreadable default.
-- Explicit separation between node selection and full detail viewing; no manual node positioning.
+- Explicit separation between relationship selection and full detail viewing; opening details preserves the selected relationship context and global layout.
 - Map-local node focus overlay with full content, relationships, and references.
 - Host-native `Ask why`, `Challenge`, and `Continue` actions.
 - Reviewer-only `Accept`, `Reject`, and accepted-finding handoff actions.
