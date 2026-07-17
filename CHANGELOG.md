@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2 - 2026-07-17
+
+- Reserve ordinary wheel and trackpad scrolling for the host conversation while keeping pinch-to-zoom and explicit map zoom controls.
+- Smooth pinch zoom deltas to avoid abrupt scale jumps on high-resolution trackpads.
+
 ## 0.1.1 - 2026-07-17
 
 - Keep the complete work map visible when selecting a node and highlight its direct relationship context in place.

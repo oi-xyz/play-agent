@@ -242,6 +242,10 @@ test('resources/read returns the focused Work Map app HTML', async () => {
   assert.match(html, /Highlight node types/);
   assert.match(html, /Clear highlights/);
   assert.match(html, /canvas\.scrollLeft = 0/);
+  assert.match(html, /function isZoomGesture\(event\) \{\s+return event\.ctrlKey/);
+  assert.match(html, /if \(!isZoomGesture\(event\)\) return;\s+event\.preventDefault\(\)/);
+  assert.match(html, /Math\.exp\(-delta \* \.012\)/);
+  assert.doesNotMatch(html, /event\.deltaY < 0 \? 1\.08 : \.92/);
   assert.match(html, /\.focus-footer\[hidden\]/);
   assert.doesNotMatch(html, /nodeDragState/);
   assert.doesNotMatch(html, /function applyFocusedLayout/);

@@ -26,6 +26,8 @@ Qualitative confidence is limited to `claim`, `assumption`, and `lesson`, where 
 
 The MCP App contains the map, map controls, and a temporary node detail overlay. A single node click highlights its direct relationship neighborhood without hiding nodes, changing layout, or moving the viewport. `View details` opens complete content without replacing the current relationship selection. Nodes are not manually draggable, and reset clears the selection and restores the deterministic global view. The App does not contain a Selected Node sidebar, database inspector, form editor, or parallel chat UI.
 
+Because the map is embedded in a conversation, ordinary wheel and trackpad scrolling belongs to the host conversation. The map zooms only from an explicit pinch gesture or its zoom buttons; drag-to-pan remains an intentional pointer action. This avoids an invisible activation mode and prevents the inline App from trapping routine conversation navigation.
+
 ## Host-Native Follow-Up
 
 Node actions use the host's `sendFollowUpMessage` capability. If the host does not expose that capability, the actions are not shown; Play Agent does not implement a substitute conversation system.

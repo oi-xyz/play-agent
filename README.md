@@ -148,7 +148,8 @@ The same input produces the same snapshot ID and Dagre layout. The tool is read-
 The App contains only the Work Map surface. It provides:
 
 - smooth, directed, labeled edges and deterministic Dagre layout;
-- search, multi-type highlighting with relationship context, fit view, zoom, and pan;
+- search, multi-type highlighting with relationship context, fit view, explicit zoom controls, pinch-to-zoom, and drag-to-pan;
+- host-first scrolling: ordinary wheel and trackpad scrolling stays with the Codex conversation instead of zooming the inline map;
 - single-click relationship highlighting that preserves the full map and its deterministic global layout;
 - an explicit `View details` action that does not replace the current relationship selection;
 - view reset; nodes are not manually draggable;

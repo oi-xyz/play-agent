@@ -17759,6 +17759,10 @@ function workMapAppHtml() {
       applyTransform();
     }
 
+    function isZoomGesture(event) {
+      return event.ctrlKey;
+    }
+
     function navigateFromMinimap(event) {
       const rect = minimapSvg.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
@@ -18025,9 +18029,11 @@ function workMapAppHtml() {
 
     canvas.addEventListener('wheel', function (event) {
       if (!focusLayer.hidden || event.target.closest('.minimap')) return;
+      if (!isZoomGesture(event)) return;
       event.preventDefault();
       const rect = canvas.getBoundingClientRect();
-      setZoom(transform.scale * (event.deltaY < 0 ? 1.08 : .92), event.clientX - rect.left, event.clientY - rect.top);
+      const delta = Math.max(-32, Math.min(32, event.deltaY));
+      setZoom(transform.scale * Math.exp(-delta * .012), event.clientX - rect.left, event.clientY - rect.top);
     }, {passive: false});
 
     canvas.addEventListener('pointerdown', function (event) {
