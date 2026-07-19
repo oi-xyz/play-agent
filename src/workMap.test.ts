@@ -13,7 +13,10 @@ const input: PresentWorkMapInput = {
       id: 'evidence-host-ui',
       kind: 'evidence',
       title: 'MCP Apps render inside the host conversation',
-      references: [{label: 'Apps SDK reference', uri: 'https://developers.openai.com/apps-sdk/reference'}],
+      references: [
+        {label: 'Apps SDK reference', uri: 'https://developers.openai.com/apps-sdk/reference'},
+        {path: 'server/mcpProtocol.ts', line: 157},
+      ],
     },
     {
       id: 'decision-mcp-first',
@@ -43,6 +46,7 @@ test('createWorkMapSnapshot preserves semantics, provenance, and references', ()
   assert.equal(snapshot.nodes[0].origin, 'reviewer');
   assert.equal(snapshot.nodes[1].origin, 'implementer');
   assert.equal(snapshot.nodes[0].references[0].label, 'Apps SDK reference');
+  assert.deepEqual(snapshot.nodes[0].references[1], {path: 'server/mcpProtocol.ts', line: 157});
   assert.deepEqual(
     snapshot.edges.map(({from, to, relation}) => ({from, to, relation})),
     [

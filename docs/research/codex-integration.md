@@ -13,7 +13,8 @@ Suggested durable instruction:
 ```text
 After substantial work where relationships materially improve review, call the
 Play Agent present_work_map tool. Use explicit semantic nodes and directed edges.
-Attach precise references to evidence and source-sensitive claims. Set authorRole
+Attach precise references to evidence and source-sensitive claims. Use path plus an
+optional line for workspace files, uri for links, and locator for non-file sources. Set authorRole
 truthfully; use reviewer only for an independently reviewed context. Keep the graph
 connected and compact. Give claim, assumption, and lesson nodes qualitative confidence
 and a basis; medium or low confidence also requires explicit uncertainty reasons. Do not

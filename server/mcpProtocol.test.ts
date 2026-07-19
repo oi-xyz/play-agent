@@ -63,6 +63,38 @@ test('present_work_map returns provenance, references, layout, and render metada
   assert.ok((result?.structuredContent.snapshot.layout.width ?? 0) > 0);
 });
 
+test('present_work_map accepts structured workspace file references without a display label', async () => {
+  const response = await handleMcpRequest({
+    jsonrpc: '2.0',
+    id: 20,
+    method: 'tools/call',
+    params: {
+      name: 'present_work_map',
+      arguments: {
+        title: 'Reference contract',
+        authorRole: 'agent',
+        nodes: [
+          {
+            id: 'evidence-schema',
+            kind: 'evidence',
+            title: 'The schema defines file references',
+            references: [{path: 'server/mcpProtocol.ts', line: 30}],
+          },
+        ],
+        edges: [],
+      },
+    },
+  });
+
+  assert.ok(response && 'result' in response);
+  const result = response && 'result' in response
+    ? (response.result as {structuredContent: {snapshot: {nodes: Array<{references: unknown[]}>}}})
+    : null;
+  assert.deepEqual(result?.structuredContent.snapshot.nodes[0].references, [
+    {path: 'server/mcpProtocol.ts', line: 30},
+  ]);
+});
+
 test('present_work_map rejects legacy, dangling, and disconnected graphs', async () => {
   const legacyResponse = await handleMcpRequest({
     jsonrpc: '2.0',
@@ -117,6 +149,65 @@ test('graph validation rejects duplicate nodes, duplicate edges, self-links, and
     assert.equal(messages.some((message) => message.includes('Self-referencing')), true);
     assert.equal(messages.some((message) => message.includes('Duplicate relationship')), true);
   }
+});
+
+test('reference validation requires exactly one location form and binds line to path', () => {
+  const multipleLocations = presentWorkMapInputSchema.safeParse({
+    title: 'Ambiguous reference',
+    authorRole: 'agent',
+    nodes: [
+      {
+        id: 'evidence-1',
+        kind: 'evidence',
+        title: 'Ambiguous source',
+        references: [{path: 'src/workMap.ts', uri: 'https://example.com'}],
+      },
+    ],
+    edges: [],
+  });
+  assert.equal(multipleLocations.success, false);
+
+  const detachedLine = presentWorkMapInputSchema.safeParse({
+    title: 'Detached line',
+    authorRole: 'agent',
+    nodes: [
+      {
+        id: 'evidence-1',
+        kind: 'evidence',
+        title: 'Invalid line',
+        references: [{locator: 'section 2', line: 42}],
+      },
+    ],
+    edges: [],
+  });
+  assert.equal(detachedLine.success, false);
+  if (!detachedLine.success) {
+    assert.equal(detachedLine.error.issues.some((issue) => issue.path.at(-1) === 'line'), true);
+  }
+});
+
+test('invalid tool calls return indexed validation issues', async () => {
+  const response = await handleMcpRequest({
+    jsonrpc: '2.0',
+    id: 21,
+    method: 'tools/call',
+    params: {
+      name: 'present_work_map',
+      arguments: {
+        title: 'Invalid reference',
+        authorRole: 'agent',
+        nodes: [{id: 'evidence-1', kind: 'evidence', title: 'Missing source', references: [{line: 12}]}],
+        edges: [],
+      },
+    },
+  });
+
+  assert.ok(response && 'error' in response);
+  const issues = response && 'error' in response
+    ? (response.error.data as {issues: Array<{path: string; message: string}>}).issues
+    : [];
+  assert.equal(issues.some((issue) => issue.path === 'nodes.0.references.0'), true);
+  assert.equal(issues.some((issue) => issue.path === 'nodes.0.references.0.line'), true);
 });
 
 test('graph validation caps inline maps at 24 nodes and 48 relationships', () => {
@@ -220,6 +311,7 @@ test('resources/read returns the focused Work Map app HTML', async () => {
   assert.match(html, /Supporting references:/);
   assert.match(html, /Confidence basis:/);
   assert.match(html, /Uncertainty reasons:/);
+  assert.match(html, /if \(reference\.path\) return reference\.path/);
   assert.match(html, /reference\.uri \|\| reference\.locator/);
   assert.match(html, /I reject this reviewer finding/);
   assert.match(html, /References/);

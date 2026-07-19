@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3 - 2026-07-18
+
+- Make workspace code references first-class with structured `path` and optional `line` fields.
+- Make reference labels optional and provide exact reference examples in the tool and skill contracts.
+- Return indexed validation issues instead of flattened repeated field errors when a tool call is invalid.
+
 ## 0.1.2 - 2026-07-17
 
 - Reserve ordinary wheel and trackpad scrolling for the host conversation while keeping pinch-to-zoom and explicit map zoom controls.

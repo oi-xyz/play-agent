@@ -27,8 +27,10 @@ function normalizeNode(node: PresentWorkMapInput['nodes'][number], authorRole: P
     body: normalizeBody(node.body),
     origin: node.origin ?? authorRole,
     references: (node.references ?? []).map((reference) => ({
-      label: normalizeInlineText(reference.label),
+      ...(reference.label ? {label: normalizeInlineText(reference.label)} : {}),
       ...(reference.uri ? {uri: reference.uri.trim()} : {}),
+      ...(reference.path ? {path: reference.path.trim()} : {}),
+      ...(reference.line ? {line: reference.line} : {}),
       ...(reference.locator ? {locator: normalizeInlineText(reference.locator)} : {}),
     })),
     ...(node.confidence ? {confidence: node.confidence} : {}),

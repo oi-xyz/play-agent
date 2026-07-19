@@ -37,8 +37,10 @@ export type WorkMapConfidence = (typeof workMapConfidenceLevels)[number];
 export const confidenceNodeKinds = ['claim', 'assumption', 'lesson'] as const;
 
 export type WorkMapReference = {
-  label: string;
+  label?: string;
   uri?: string;
+  path?: string;
+  line?: number;
   locator?: string;
 };
 

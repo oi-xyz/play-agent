@@ -73,7 +73,7 @@ mitigates · resolves · leads_to · alternative_to
 
 Every map has an `authorRole`: `user`, `agent`, `implementer`, or `reviewer`. A node may override that role when it originated elsewhere. `reviewer` should only be used for work produced in an independently reviewed context.
 
-References are attached to nodes and must include a URI or precise locator. They let the user inspect the basis of a claim independently of its qualitative confidence.
+References are attached to nodes and use exactly one inspectable location: `path` with an optional 1-based `line` for workspace files, `uri` for links, or `locator` for a precise non-file location such as a document section or transcript turn. `label` is optional. This keeps code references structured instead of making the caller concatenate paths and lines into prose, and lets the user inspect a claim's basis independently of its qualitative confidence.
 
 ## User Journey
 
@@ -95,7 +95,7 @@ The tool should not be called for simple answers where a map adds no inspection 
 - `nodes[]`, limited to 24
 - `edges[]`, limited to 48
 
-For a multi-node map, all nodes must belong to one connected graph. The server rejects duplicate IDs, dangling edges, self-links, duplicate relationships, disconnected nodes, and references without a URI or locator. It never invents missing edges.
+For a multi-node map, all nodes must belong to one connected graph. The server rejects duplicate IDs, dangling edges, self-links, duplicate relationships, disconnected nodes, and references that do not contain exactly one of `path`, `uri`, or `locator`. It never invents missing edges.
 
 ```json
 {
@@ -106,11 +106,11 @@ For a multi-node map, all nodes must belong to one connected graph. The server r
     {
       "id": "evidence-host-ui",
       "kind": "evidence",
-      "title": "MCP Apps render inside the host conversation",
+      "title": "The MCP protocol validates references before rendering",
       "references": [
         {
-          "label": "Apps SDK reference",
-          "uri": "https://developers.openai.com/apps-sdk/reference"
+          "path": "server/mcpProtocol.ts",
+          "line": 30
         }
       ]
     },

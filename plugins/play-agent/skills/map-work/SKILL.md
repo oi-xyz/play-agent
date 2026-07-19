@@ -25,7 +25,7 @@ Do not call it for a short answer, a single fact, a flat checklist, or prose tha
 2. Select the smallest useful semantic set. Prefer 4-12 nodes; never exceed the tool limits.
 3. Use only the tool's node kinds and directed relations. Titles must state the actual claim, evidence, risk, decision, or action rather than repeat category names.
 4. Connect every node into one meaningful graph. Do not invent edges to satisfy connectivity; remove irrelevant nodes instead.
-5. Attach precise file locators or source URIs to evidence and source-sensitive claims. Never fabricate a reference.
+5. Attach inspectable references to evidence and source-sensitive claims. Use `{"path":"src/file.ts","line":42}` for code, `{"label":"Source name","uri":"https://..."}` for links, or `{"label":"Interview","locator":"turn 18"}` for other precise locations. Never fabricate a reference or combine location forms in one reference.
 6. Set provenance truthfully:
    - `implementer` when this task performed the implementation;
    - `reviewer` only in a genuinely separate review context;

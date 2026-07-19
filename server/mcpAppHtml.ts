@@ -1143,6 +1143,20 @@ export function workMapAppHtml() {
       return String(value || '').replaceAll('_', ' ').replace(/\\b\\w/g, function (letter) { return letter.toUpperCase(); });
     }
 
+    function referenceLocation(reference) {
+      if (reference.path) return reference.path + (reference.line ? ':' + reference.line : '');
+      return reference.uri || reference.locator || '';
+    }
+
+    function referenceLabel(reference) {
+      return reference.label || referenceLocation(reference);
+    }
+
+    function referenceDetail(reference) {
+      const location = referenceLocation(reference);
+      return reference.label && location !== reference.label ? location : '';
+    }
+
     function findSnapshot(value) {
       if (!value || typeof value !== 'object') return null;
       if (value.snapshot && Array.isArray(value.snapshot.nodes)) return value.snapshot;
@@ -1162,7 +1176,7 @@ export function workMapAppHtml() {
       const query = searchElement.value.trim().toLowerCase();
       return snapshot.nodes.filter(function (node) {
         const references = (node.references || []).map(function (reference) {
-          return [reference.label, reference.uri, reference.locator].filter(Boolean).join(' ');
+          return [reference.label, reference.uri, reference.path, reference.line, reference.locator].filter(Boolean).join(' ');
         }).join(' ');
         const haystack = [
           node.title,
@@ -1516,8 +1530,9 @@ export function workMapAppHtml() {
         const open = reference.uri && typeof window.openai?.openExternal === 'function'
           ? '<button class="reference-link" type="button" data-reference-index="' + index + '">Open</button>'
           : '';
-        return '<div class="reference-row"><span><strong>' + escapeHtml(reference.label) + '</strong>' +
-          (reference.locator ? '<code>' + escapeHtml(reference.locator) + '</code>' : '') + '</span>' + open + '</div>';
+        const detail = referenceDetail(reference);
+        return '<div class="reference-row"><span><strong>' + escapeHtml(referenceLabel(reference)) + '</strong>' +
+          (detail ? '<code>' + escapeHtml(detail) + '</code>' : '') + '</span>' + open + '</div>';
       }).join('');
 
       const actionsAvailable = typeof window.openai?.sendFollowUpMessage === 'function';
@@ -1548,8 +1563,8 @@ export function workMapAppHtml() {
 
     function followUpPrompt(action, node) {
       const references = (node.references || []).map(function (reference) {
-        const location = reference.uri || reference.locator || 'No location provided';
-        return '- ' + reference.label + ': ' + location;
+        const location = referenceLocation(reference);
+        return reference.label ? '- ' + reference.label + ': ' + location : '- ' + location;
       });
       const referenceContext = references.length ? '\\nSupporting references:\\n' + references.join('\\n') : '\\nSupporting references: none attached.';
       const uncertaintyReasons = (node.uncertaintyReasons || []).map(function (reason) { return '- ' + reason; });

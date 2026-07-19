@@ -20,6 +20,8 @@ Node kinds represent claims, evidence, options, decisions, assumptions, risks, q
 
 Every map declares an author role, nodes can preserve a different origin, and evidence can carry inspectable references. A reviewer role means independent review, not implementer self-critique.
 
+Workspace code references preserve `path` and optional `line` as structured fields. URLs use `uri`, and document or transcript locations use `locator`. Each reference has exactly one location form; the server validates the supplied reference but does not reinterpret or repair it.
+
 Qualitative confidence is limited to `claim`, `assumption`, and `lesson`, where the node represents an inferential judgment. It requires a basis, and medium or low confidence requires concrete uncertainty reasons. It is intentionally absent from evidence, decisions, risks, questions, options, and actions. Confidence helps direct follow-up work but never substitutes for provenance, references, or independent review.
 
 ## Work Map Only

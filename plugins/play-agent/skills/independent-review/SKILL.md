@@ -29,6 +29,7 @@ Do not import the implementer's conclusions as established facts. The implementa
    - an accepted correction leads to an action.
 6. Set map-level `authorRole` to `reviewer`, set `reviewOf` precisely, and preserve implementer or user origin on quoted positions.
 7. Add qualitative confidence and its basis to reviewer `claim`, `assumption`, and `lesson` nodes. Medium and low confidence require concrete uncertainty reasons. Confidence does not replace evidence or reviewer isolation.
+8. Reference workspace code with `{"path":"src/file.ts","line":42}`. Use `uri` for links and `locator` only for precise non-file locations; each reference uses exactly one location form.
 
 Before calling the tool, perform a connectivity preflight by treating every directed edge as undirected and checking that all nodes are reachable. Multiple independent findings usually converge on a truthful review result such as "this checkpoint does not pass" and then lead to separate corrective actions. If they share no real outcome, omit unrelated nodes or use separate maps; do not wait for schema rejection and then invent a connecting edge.
 

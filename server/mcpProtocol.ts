@@ -29,13 +29,24 @@ const nodeIdSchema = z
 
 const referenceSchema = z
   .object({
-    label: z.string().min(1),
+    label: z.string().min(1).optional(),
     uri: z.string().min(1).optional(),
+    path: z.string().min(1).optional(),
+    line: z.number().int().positive().optional(),
     locator: z.string().min(1).optional(),
   })
   .strict()
-  .refine((reference) => Boolean(reference.uri || reference.locator), {
-    message: 'A reference must include a uri or locator.',
+  .superRefine((reference, context) => {
+    const locationCount = [reference.uri, reference.path, reference.locator].filter(Boolean).length;
+    if (locationCount !== 1) {
+      context.addIssue({
+        code: 'custom',
+        message: 'A reference must include exactly one of uri, path, or locator.',
+      });
+    }
+    if (reference.line && !reference.path) {
+      context.addIssue({code: 'custom', message: 'line is only valid with path.', path: ['line']});
+    }
   });
 
 const confidenceKindSet = new Set<string>(confidenceNodeKinds);
@@ -156,13 +167,16 @@ export const presentWorkMapInputSchema = z
 
 const referenceJsonSchema = {
   type: 'object',
-  required: ['label'],
   additionalProperties: false,
-  anyOf: [{required: ['uri']}, {required: ['locator']}],
+  description:
+    'An inspectable source location. Use {path, line?} for workspace files, {uri, label?} for links, or {locator, label?} for a precise non-file location. Include exactly one of path, uri, or locator.',
+  oneOf: [{required: ['path']}, {required: ['uri']}, {required: ['locator']}],
   properties: {
-    label: {type: 'string', description: 'Short user-facing source name.'},
+    label: {type: 'string', description: 'Optional short user-facing source name.'},
     uri: {type: 'string', description: 'Source URL or URI when one exists.'},
-    locator: {type: 'string', description: 'Precise file, line, section, quote, or transcript locator.'},
+    path: {type: 'string', description: 'Workspace-relative or absolute file path. Use this instead of locator for code.'},
+    line: {type: 'integer', minimum: 1, description: 'Optional 1-based line number; valid only with path.'},
+    locator: {type: 'string', description: 'Precise section, quote, transcript turn, or other non-file location.'},
   },
 } as const;
 
@@ -210,7 +224,13 @@ const toolInputSchema = {
             enum: workMapAuthorRoles,
             description: 'Override authorRole only when this node originated from a different role.',
           },
-          references: {type: 'array', maxItems: 6, items: referenceJsonSchema},
+          references: {
+            type: 'array',
+            maxItems: 6,
+            description:
+              'Inspectable sources. File example: {"path":"src/workMap.ts","line":42}. Link example: {"label":"Apps SDK","uri":"https://..."}.',
+            items: referenceJsonSchema,
+          },
           confidence: {
             type: 'string',
             enum: workMapConfidenceLevels,
@@ -423,7 +443,13 @@ function callToolResult(name: string, args: unknown) {
   if (name !== 'present_work_map') throw new McpError(-32601, `Unknown tool: ${name}`);
   const parsed = presentWorkMapInputSchema.safeParse(args);
   if (!parsed.success) {
-    throw new McpError(-32602, 'Invalid present_work_map arguments.', parsed.error.flatten());
+    throw new McpError(-32602, 'Invalid present_work_map arguments.', {
+      issues: parsed.error.issues.map((issue) => ({
+        path: issue.path.join('.'),
+        code: issue.code,
+        message: issue.message,
+      })),
+    });
   }
 
   const result = presentWorkMap(parsed.data);
@@ -462,7 +488,7 @@ export async function handleMcpRequest(request: JsonRpcRequest): Promise<JsonRpc
         return success(request.id, {
           protocolVersion: '2025-06-18',
           capabilities: {tools: {}, resources: {}},
-          serverInfo: {name: 'play-agent', version: '0.1.0'},
+          serverInfo: {name: 'play-agent', version: '0.1.3'},
         });
       case 'ping':
         return success(request.id, {});

@@ -16192,8 +16192,10 @@ function normalizeNode(node, authorRole) {
     body: normalizeBody(node.body),
     origin: node.origin ?? authorRole,
     references: (node.references ?? []).map((reference) => ({
-      label: normalizeInlineText(reference.label),
+      ...reference.label ? { label: normalizeInlineText(reference.label) } : {},
       ...reference.uri ? { uri: reference.uri.trim() } : {},
+      ...reference.path ? { path: reference.path.trim() } : {},
+      ...reference.line ? { line: reference.line } : {},
       ...reference.locator ? { locator: normalizeInlineText(reference.locator) } : {}
     })),
     ...node.confidence ? { confidence: node.confidence } : {},
@@ -17450,6 +17452,20 @@ function workMapAppHtml() {
       return String(value || '').replaceAll('_', ' ').replace(/\\b\\w/g, function (letter) { return letter.toUpperCase(); });
     }
 
+    function referenceLocation(reference) {
+      if (reference.path) return reference.path + (reference.line ? ':' + reference.line : '');
+      return reference.uri || reference.locator || '';
+    }
+
+    function referenceLabel(reference) {
+      return reference.label || referenceLocation(reference);
+    }
+
+    function referenceDetail(reference) {
+      const location = referenceLocation(reference);
+      return reference.label && location !== reference.label ? location : '';
+    }
+
     function findSnapshot(value) {
       if (!value || typeof value !== 'object') return null;
       if (value.snapshot && Array.isArray(value.snapshot.nodes)) return value.snapshot;
@@ -17469,7 +17485,7 @@ function workMapAppHtml() {
       const query = searchElement.value.trim().toLowerCase();
       return snapshot.nodes.filter(function (node) {
         const references = (node.references || []).map(function (reference) {
-          return [reference.label, reference.uri, reference.locator].filter(Boolean).join(' ');
+          return [reference.label, reference.uri, reference.path, reference.line, reference.locator].filter(Boolean).join(' ');
         }).join(' ');
         const haystack = [
           node.title,
@@ -17823,8 +17839,9 @@ function workMapAppHtml() {
         const open = reference.uri && typeof window.openai?.openExternal === 'function'
           ? '<button class="reference-link" type="button" data-reference-index="' + index + '">Open</button>'
           : '';
-        return '<div class="reference-row"><span><strong>' + escapeHtml(reference.label) + '</strong>' +
-          (reference.locator ? '<code>' + escapeHtml(reference.locator) + '</code>' : '') + '</span>' + open + '</div>';
+        const detail = referenceDetail(reference);
+        return '<div class="reference-row"><span><strong>' + escapeHtml(referenceLabel(reference)) + '</strong>' +
+          (detail ? '<code>' + escapeHtml(detail) + '</code>' : '') + '</span>' + open + '</div>';
       }).join('');
 
       const actionsAvailable = typeof window.openai?.sendFollowUpMessage === 'function';
@@ -17855,8 +17872,8 @@ function workMapAppHtml() {
 
     function followUpPrompt(action, node) {
       const references = (node.references || []).map(function (reference) {
-        const location = reference.uri || reference.locator || 'No location provided';
-        return '- ' + reference.label + ': ' + location;
+        const location = referenceLocation(reference);
+        return reference.label ? '- ' + reference.label + ': ' + location : '- ' + location;
       });
       const referenceContext = references.length ? '\\nSupporting references:\\n' + references.join('\\n') : '\\nSupporting references: none attached.';
       const uncertaintyReasons = (node.uncertaintyReasons || []).map(function (reason) { return '- ' + reason; });
@@ -18107,11 +18124,22 @@ function workMapAppHtml() {
 // server/mcpProtocol.ts
 var nodeIdSchema = external_exports.string().min(1).max(64).regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, "Use a short stable ID containing only letters, numbers, underscores, or hyphens.");
 var referenceSchema = external_exports.object({
-  label: external_exports.string().min(1),
+  label: external_exports.string().min(1).optional(),
   uri: external_exports.string().min(1).optional(),
+  path: external_exports.string().min(1).optional(),
+  line: external_exports.number().int().positive().optional(),
   locator: external_exports.string().min(1).optional()
-}).strict().refine((reference) => Boolean(reference.uri || reference.locator), {
-  message: "A reference must include a uri or locator."
+}).strict().superRefine((reference, context) => {
+  const locationCount = [reference.uri, reference.path, reference.locator].filter(Boolean).length;
+  if (locationCount !== 1) {
+    context.addIssue({
+      code: "custom",
+      message: "A reference must include exactly one of uri, path, or locator."
+    });
+  }
+  if (reference.line && !reference.path) {
+    context.addIssue({ code: "custom", message: "line is only valid with path.", path: ["line"] });
+  }
 });
 var confidenceKindSet = new Set(confidenceNodeKinds);
 var workMapNodeSchema = external_exports.object({
@@ -18213,13 +18241,15 @@ var presentWorkMapInputSchema = external_exports.object({
 });
 var referenceJsonSchema = {
   type: "object",
-  required: ["label"],
   additionalProperties: false,
-  anyOf: [{ required: ["uri"] }, { required: ["locator"] }],
+  description: "An inspectable source location. Use {path, line?} for workspace files, {uri, label?} for links, or {locator, label?} for a precise non-file location. Include exactly one of path, uri, or locator.",
+  oneOf: [{ required: ["path"] }, { required: ["uri"] }, { required: ["locator"] }],
   properties: {
-    label: { type: "string", description: "Short user-facing source name." },
+    label: { type: "string", description: "Optional short user-facing source name." },
     uri: { type: "string", description: "Source URL or URI when one exists." },
-    locator: { type: "string", description: "Precise file, line, section, quote, or transcript locator." }
+    path: { type: "string", description: "Workspace-relative or absolute file path. Use this instead of locator for code." },
+    line: { type: "integer", minimum: 1, description: "Optional 1-based line number; valid only with path." },
+    locator: { type: "string", description: "Precise section, quote, transcript turn, or other non-file location." }
   }
 };
 var toolInputSchema = {
@@ -18265,7 +18295,12 @@ var toolInputSchema = {
             enum: workMapAuthorRoles,
             description: "Override authorRole only when this node originated from a different role."
           },
-          references: { type: "array", maxItems: 6, items: referenceJsonSchema },
+          references: {
+            type: "array",
+            maxItems: 6,
+            description: 'Inspectable sources. File example: {"path":"src/workMap.ts","line":42}. Link example: {"label":"Apps SDK","uri":"https://..."}.',
+            items: referenceJsonSchema
+          },
           confidence: {
             type: "string",
             enum: workMapConfidenceLevels,
@@ -18463,7 +18498,13 @@ function callToolResult(name, args) {
   if (name !== "present_work_map") throw new McpError(-32601, `Unknown tool: ${name}`);
   const parsed = presentWorkMapInputSchema.safeParse(args);
   if (!parsed.success) {
-    throw new McpError(-32602, "Invalid present_work_map arguments.", parsed.error.flatten());
+    throw new McpError(-32602, "Invalid present_work_map arguments.", {
+      issues: parsed.error.issues.map((issue2) => ({
+        path: issue2.path.join("."),
+        code: issue2.code,
+        message: issue2.message
+      }))
+    });
   }
   const result = presentWorkMap(parsed.data);
   return {
@@ -18498,7 +18539,7 @@ async function handleMcpRequest(request) {
         return success2(request.id, {
           protocolVersion: "2025-06-18",
           capabilities: { tools: {}, resources: {} },
-          serverInfo: { name: "play-agent", version: "0.1.0" }
+          serverInfo: { name: "play-agent", version: "0.1.3" }
         });
       case "ping":
         return success2(request.id, {});
