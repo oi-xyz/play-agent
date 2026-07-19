@@ -60,6 +60,6 @@ Play Agent should not automate task discovery or maintain hidden handoff state u
 ## Layout And Host Coverage
 
 - Test 5, 15, and 24-node maps with branching, multi-parent edges, and cycles.
-- Verify inline and fullscreen behavior in each target MCP Apps host.
+- Verify inline and host-native fullscreen behavior in each target MCP Apps host, including context preservation and viewport fitting across transitions.
 - Confirm follow-up and external-reference capabilities through feature detection.
 - Keep tools decoupled from rendering and keep unsupported host limitations explicit.

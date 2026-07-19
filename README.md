@@ -80,7 +80,7 @@ References are attached to nodes and use exactly one inspectable location: `path
 1. The user asks Codex to perform substantial work.
 2. Codex calls `present_work_map` when relationships, evidence, alternatives, or follow-up work materially benefit from a map.
 3. The MCP host renders `ui://play-agent/work-map.html` inline.
-4. The user searches, filters, pans, zooms, and opens a node to inspect its complete content, provenance, references, and relationships.
+4. The user searches, filters, pans, zooms, opens a node to inspect its complete content, or expands the Work Map into the host's fullscreen surface when available.
 5. In hosts that support the Apps SDK bridge, the user can choose `Ask why`, `Challenge`, or `Continue`; reviewer nodes additionally support `Accept`, `Reject`, and `Accept & handoff`. The MCP App sends the explicit user decision to the host conversation.
 
 The tool should not be called for simple answers where a map adds no inspection value.
@@ -150,6 +150,7 @@ The App contains only the Work Map surface. It provides:
 - smooth, directed, labeled edges and deterministic Dagre layout;
 - search, multi-type highlighting with relationship context, fit view, explicit zoom controls, pinch-to-zoom, and drag-to-pan;
 - host-first scrolling: ordinary wheel and trackpad scrolling stays with the Codex conversation instead of zooming the inline map;
+- host-native fullscreen: a capability-gated toolbar action requests the host's fullscreen surface, preserves map context, and fits the graph to the expanded viewport;
 - single-click relationship highlighting that preserves the full map and its deterministic global layout;
 - an explicit `View details` action that does not replace the current relationship selection;
 - view reset; nodes are not manually draggable;

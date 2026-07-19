@@ -30,6 +30,8 @@ The MCP App contains the map, map controls, and a temporary node detail overlay.
 
 Because the map is embedded in a conversation, ordinary wheel and trackpad scrolling belongs to the host conversation. The map zooms only from an explicit pinch gesture or its zoom buttons; drag-to-pan remains an intentional pointer action. This avoids an invisible activation mode and prevents the inline App from trapping routine conversation navigation.
 
+The map requests the host's native fullscreen display mode when that capability is available. Fullscreen keeps the same map instance, selected node, filters, and detail state while fitting the graph to the larger viewport. Unsupported hosts do not show the action; Play Agent does not simulate fullscreen with CSS overlays, PiP, external pages, or substitute windows.
+
 ## Host-Native Follow-Up
 
 Node actions use the host's `sendFollowUpMessage` capability. If the host does not expose that capability, the actions are not shown; Play Agent does not implement a substitute conversation system.

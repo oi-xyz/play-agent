@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4 - 2026-07-19
+
+- Add a capability-gated toolbar action for the host's native fullscreen display mode.
+- Preserve map selection and highlights while fitting the graph to the expanded fullscreen viewport.
+- Hide fullscreen controls in unsupported hosts instead of simulating a substitute display surface.
+
 ## 0.1.3 - 2026-07-18
 
 - Make workspace code references first-class with structured `path` and optional `line` fields.

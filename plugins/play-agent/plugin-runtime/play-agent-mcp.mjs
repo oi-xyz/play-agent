@@ -16402,6 +16402,17 @@ function workMapAppHtml() {
       background: var(--background);
     }
 
+    html[data-display-mode="fullscreen"],
+    html[data-display-mode="fullscreen"] body {
+      height: 100%;
+      min-height: 0;
+    }
+
+    html[data-display-mode="fullscreen"] .work-map {
+      height: 100vh;
+      min-height: 0;
+    }
+
     .toolbar {
       display: grid;
       grid-template-columns: minmax(11rem, auto) minmax(12rem, 1fr) auto;
@@ -16681,6 +16692,16 @@ function workMapAppHtml() {
     .toolbar-actions .icon-button {
       border-color: transparent;
       background: transparent;
+    }
+
+    .icon-button:disabled {
+      cursor: default;
+      opacity: .5;
+    }
+
+    .icon-button[hidden],
+    .icon-button svg[hidden] {
+      display: none;
     }
 
     .icon-button svg,
@@ -17294,6 +17315,10 @@ function workMapAppHtml() {
         <button id="fit-view" class="icon-button" type="button" title="Fit all nodes" aria-label="Fit all nodes">
           <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
         </button>
+        <button id="display-mode" class="icon-button" type="button" title="Open fullscreen" aria-label="Open fullscreen" aria-pressed="false" hidden>
+          <svg data-display-icon="enter" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+          <svg data-display-icon="exit" viewBox="0 0 24 24" hidden><path d="M14 10h7V3M10 14H3v7M21 3l-7 7M3 21l7-7"/></svg>
+        </button>
       </div>
     </header>
 
@@ -17418,6 +17443,7 @@ function workMapAppHtml() {
     const minimapViewport = document.getElementById('minimap-viewport');
     const focusLayer = document.getElementById('focus-layer');
     const focusCard = document.getElementById('focus-card');
+    const displayModeButton = document.getElementById('display-mode');
     const initId = 'play-agent-init-' + Math.random().toString(36).slice(2);
 
     let snapshot = null;
@@ -17430,6 +17456,8 @@ function workMapAppHtml() {
     let highlightedKinds = new Set();
     let minimapViewBox = {x: 0, y: 0, width: 1, height: 1};
     let minimapDragging = false;
+    let currentDisplayMode = null;
+    let displayModeRequestPending = false;
 
     function sendHostMessage(message) {
       if (window.parent && window.parent !== window) window.parent.postMessage(message, '*');
@@ -17464,6 +17492,54 @@ function workMapAppHtml() {
     function referenceDetail(reference) {
       const location = referenceLocation(reference);
       return reference.label && location !== reference.label ? location : '';
+    }
+
+    function scheduleViewForDisplayMode() {
+      if (!snapshot) return;
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          if (currentDisplayMode === 'fullscreen') fitView();
+          else initialView();
+        });
+      });
+    }
+
+    function updateDisplayModeControl() {
+      const bridge = window.openai;
+      const nextMode = bridge?.displayMode || 'inline';
+      const modeChanged = currentDisplayMode !== nextMode;
+      currentDisplayMode = nextMode;
+      document.documentElement.dataset.displayMode = nextMode;
+
+      const supported = typeof bridge?.requestDisplayMode === 'function';
+      displayModeButton.hidden = !supported;
+      if (!supported) return;
+
+      const fullscreen = nextMode === 'fullscreen';
+      const label = fullscreen ? 'Exit fullscreen' : 'Open fullscreen';
+      displayModeButton.title = label;
+      displayModeButton.setAttribute('aria-label', label);
+      displayModeButton.setAttribute('aria-pressed', String(fullscreen));
+      displayModeButton.querySelector('[data-display-icon="enter"]').hidden = fullscreen;
+      displayModeButton.querySelector('[data-display-icon="exit"]').hidden = !fullscreen;
+      displayModeButton.disabled = displayModeRequestPending;
+      if (modeChanged) scheduleViewForDisplayMode();
+    }
+
+    async function toggleDisplayMode() {
+      const bridge = window.openai;
+      if (displayModeRequestPending || typeof bridge?.requestDisplayMode !== 'function') return;
+      displayModeRequestPending = true;
+      updateDisplayModeControl();
+      try {
+        const nextMode = currentDisplayMode === 'fullscreen' ? 'inline' : 'fullscreen';
+        await bridge.requestDisplayMode({mode: nextMode});
+      } catch (error) {
+        console.warn('The host declined the display mode request.', error);
+      } finally {
+        displayModeRequestPending = false;
+        updateDisplayModeControl();
+      }
     }
 
     function findSnapshot(value) {
@@ -18035,6 +18111,7 @@ function workMapAppHtml() {
     });
     document.getElementById('fit-view').addEventListener('click', fitView);
     document.getElementById('reset-view').addEventListener('click', resetView);
+    displayModeButton.addEventListener('click', toggleDisplayMode);
     document.getElementById('zoom-in').addEventListener('click', function () {
       const rect = canvas.getBoundingClientRect();
       setZoom(transform.scale * 1.18, rect.width / 2, rect.height / 2);
@@ -18093,11 +18170,15 @@ function workMapAppHtml() {
       minimapDragging = false;
     });
 
-    window.addEventListener('resize', initialView);
+    window.addEventListener('resize', function () {
+      if (currentDisplayMode === 'fullscreen') fitView();
+      else initialView();
+    });
 
     function renderFromOpenAiBridge() {
       const bridge = window.openai;
       if (!bridge) return;
+      updateDisplayModeControl();
       const found = findSnapshot(bridge.toolOutput) || findSnapshot(bridge.toolResponseMetadata) || findSnapshot(bridge);
       if (found) render(found);
     }
@@ -18110,10 +18191,12 @@ function workMapAppHtml() {
       if (found) render(found);
     });
     window.addEventListener('openai:set_globals', function (event) {
+      updateDisplayModeControl();
       const found = findSnapshot(event.detail);
       if (found) render(found);
       renderFromOpenAiBridge();
     });
+    updateDisplayModeControl();
     if (window.__PLAY_AGENT_WORK_MAP__) render(window.__PLAY_AGENT_WORK_MAP__);
     renderFromOpenAiBridge();
   </script>
@@ -18539,7 +18622,7 @@ async function handleMcpRequest(request) {
         return success2(request.id, {
           protocolVersion: "2025-06-18",
           capabilities: { tools: {}, resources: {} },
-          serverInfo: { name: "play-agent", version: "0.1.3" }
+          serverInfo: { name: "play-agent", version: "0.1.4" }
         });
       case "ping":
         return success2(request.id, {});

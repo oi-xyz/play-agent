@@ -304,6 +304,14 @@ test('resources/read returns the focused Work Map app HTML', async () => {
   assert.match(html, /window\.openai/);
   assert.match(html, /openai:set_globals/);
   assert.match(html, /sendFollowUpMessage/);
+  assert.match(html, /availableDisplayModes: \['inline', 'fullscreen'\]/);
+  assert.match(html, /id="display-mode"/);
+  assert.match(html, /requestDisplayMode\(\{mode: nextMode\}\)/);
+  assert.match(html, /typeof bridge\?\.requestDisplayMode === 'function'/);
+  assert.match(html, /data-display-mode="fullscreen"/);
+  assert.match(html, /\.icon-button\[hidden\][\s\S]*?display: none/);
+  assert.match(html, /currentDisplayMode === 'fullscreen'\) fitView\(\)/);
+  assert.doesNotMatch(html, /availableDisplayModes: \[[^\]]*pip/);
   assert.match(html, /Ask why/);
   assert.match(html, /Challenge/);
   assert.match(html, /Continue/);

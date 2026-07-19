@@ -488,7 +488,7 @@ export async function handleMcpRequest(request: JsonRpcRequest): Promise<JsonRpc
         return success(request.id, {
           protocolVersion: '2025-06-18',
           capabilities: {tools: {}, resources: {}},
-          serverInfo: {name: 'play-agent', version: '0.1.3'},
+          serverInfo: {name: 'play-agent', version: '0.1.4'},
         });
       case 'ping':
         return success(request.id, {});
