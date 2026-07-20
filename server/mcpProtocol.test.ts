@@ -286,6 +286,30 @@ test('confidence is required only for inferential nodes and uncertainty is expli
   assert.equal(valid.success, true);
 });
 
+test('specialized Kanban and C4 nodes are accepted without confidence metadata', () => {
+  const result = presentWorkMapInputSchema.safeParse({
+    title: 'Delivery architecture',
+    authorRole: 'agent',
+    nodes: [
+      {
+        id: 'work-release-api',
+        kind: 'kanban_card',
+        title: 'Release the portfolio API',
+        body: 'A tracked, independently actionable delivery item.',
+      },
+      {
+        id: 'container-portfolio-api',
+        kind: 'c4_container',
+        title: 'Portfolio API',
+        body: 'A deployable service in the C4 container view.',
+      },
+    ],
+    edges: [{from: 'work-release-api', to: 'container-portfolio-api', relation: 'depends_on'}],
+  });
+
+  assert.equal(result.success, true);
+});
+
 test('resources/read returns the focused Work Map app HTML', async () => {
   const response = await handleMcpRequest({
     jsonrpc: '2.0',
@@ -304,14 +328,26 @@ test('resources/read returns the focused Work Map app HTML', async () => {
   assert.match(html, /window\.openai/);
   assert.match(html, /openai:set_globals/);
   assert.match(html, /sendFollowUpMessage/);
-  assert.match(html, /availableDisplayModes: \['inline', 'fullscreen'\]/);
-  assert.match(html, /id="display-mode"/);
+  assert.match(html, /protocolVersion: '2026-01-26'/);
+  assert.match(html, /appInfo: \{name: 'play-agent-work-map'/);
+  assert.match(html, /availableDisplayModes: \['inline', 'pip', 'fullscreen'\]/);
+  assert.match(html, /id="pip-mode"/);
+  assert.match(html, /id="fullscreen-mode"/);
   assert.match(html, /requestDisplayMode\(\{mode: nextMode\}\)/);
   assert.match(html, /typeof bridge\?\.requestDisplayMode === 'function'/);
+  assert.match(html, /hostContext\.availableDisplayModes\.includes\(mode\)/);
+  assert.match(html, /mergeHostContext\(event\.data\.result\.hostContext\)/);
+  assert.match(html, /ui\/notifications\/host-context-changed/);
+  assert.match(html, /mergeHostContext\(\{displayMode: grantedMode\}\)/);
+  assert.match(html, /id="display-mode-status"/);
+  assert.match(html, /data-display-mode="pip"/);
   assert.match(html, /data-display-mode="fullscreen"/);
   assert.match(html, /\.icon-button\[hidden\][\s\S]*?display: none/);
-  assert.match(html, /currentDisplayMode === 'fullscreen'\) fitView\(\)/);
-  assert.doesNotMatch(html, /availableDisplayModes: \[[^\]]*pip/);
+  assert.match(html, /currentDisplayMode === 'inline'\) initialView\(\)/);
+  assert.match(html, /currentDisplayMode === 'pip' \? 'inline' : 'pip'/);
+  assert.match(html, /currentDisplayMode === 'fullscreen' \? fullscreenReturnMode : 'fullscreen'/);
+  assert.match(html, /fullscreenReturnMode = currentDisplayMode === 'pip' \? 'pip' : 'inline'/);
+  assert.match(html, /fullscreenReturnMode === 'pip' \? 'Return to picture-in-picture' : 'Exit fullscreen'/);
   assert.match(html, /Ask why/);
   assert.match(html, /Challenge/);
   assert.match(html, /Continue/);
@@ -341,6 +377,14 @@ test('resources/read returns the focused Work Map app HTML', async () => {
   assert.match(html, /confidenceBasis/);
   assert.match(html, /Highlight node types/);
   assert.match(html, /Clear highlights/);
+  assert.match(html, /A conclusion, finding, or recommendation\./);
+  assert.match(html, /class="type-filter-description"/);
+  assert.match(html, /id="kind-tooltip"/);
+  assert.match(html, /function showKindTooltip/);
+  assert.match(html, /id="focus-kind-description"/);
+  assert.match(html, /Type: ' \+ displayLabel\(node\.kind\)/);
+  assert.match(html, /\.kanban_card \{ --kind-color: var\(--kanban-card\); \}/);
+  assert.match(html, /\.c4_container \{ --kind-color: var\(--c4-container\); \}/);
   assert.match(html, /canvas\.scrollLeft = 0/);
   assert.match(html, /function isZoomGesture\(event\) \{\s+return event\.ctrlKey/);
   assert.match(html, /if \(!isZoomGesture\(event\)\) return;\s+event\.preventDefault\(\)/);

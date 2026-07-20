@@ -23,16 +23,17 @@ Do not call it for a short answer, a single fact, a flat checklist, or prose tha
 
 1. Finish and verify the substantive work first.
 2. Select the smallest useful semantic set. Prefer 4-12 nodes; never exceed the tool limits.
-3. Use only the tool's node kinds and directed relations. Titles must state the actual claim, evidence, risk, decision, or action rather than repeat category names.
-4. Connect every node into one meaningful graph. Do not invent edges to satisfy connectivity; remove irrelevant nodes instead.
-5. Attach inspectable references to evidence and source-sensitive claims. Use `{"path":"src/file.ts","line":42}` for code, `{"label":"Source name","uri":"https://..."}` for links, or `{"label":"Interview","locator":"turn 18"}` for other precise locations. Never fabricate a reference or combine location forms in one reference.
-6. Set provenance truthfully:
+3. Use only the tool's node kinds and directed relations. Titles must state the actual claim, evidence, risk, decision, work item, or architecture element rather than repeat category names.
+4. Use `kanban_card` only for work that is formally tracked and independently actionable; keep an inferred or recommended next step as `action`. Use `c4_container` only for a C4 application or data store such as a service, web app, database, or queue, never for an arbitrary module or function. Do not imply that either kind creates a complete Kanban or C4 model.
+5. Connect every node into one meaningful graph. Do not invent edges to satisfy connectivity; remove irrelevant nodes instead.
+6. Attach inspectable references to evidence and source-sensitive claims. Use `{"path":"src/file.ts","line":42}` for code, `{"label":"Source name","uri":"https://..."}` for links, or `{"label":"Interview","locator":"turn 18"}` for other precise locations. Never fabricate a reference or combine location forms in one reference.
+7. Set provenance truthfully:
    - `implementer` when this task performed the implementation;
    - `reviewer` only in a genuinely separate review context;
    - `agent` for ordinary analysis;
    - `user` only for positions supplied by the user.
-7. For every `claim`, `assumption`, and `lesson`, set qualitative `confidence` and a concrete `confidenceBasis`. For medium or low confidence, add one to three `uncertaintyReasons` that identify missing evidence, ambiguity, or an unresolved dependency. Do not add confidence fields to other node kinds.
-8. Call `present_work_map`. Do not reproduce every node again in prose after the map renders.
+8. For every `claim`, `assumption`, and `lesson`, set qualitative `confidence` and a concrete `confidenceBasis`. For medium or low confidence, add one to three `uncertaintyReasons` that identify missing evidence, ambiguity, or an unresolved dependency. Do not add confidence fields to other node kinds.
+9. Call `present_work_map`. Do not reproduce every node again in prose after the map renders.
 
 Before the call, treat edges as undirected and verify that every node is reachable from the first node. When the result contains separate clusters, connect them only through a real shared decision, review result, or action. If no truthful relationship joins them, remove the unrelated material or present separate maps instead of relying on a failed call and retry.
 

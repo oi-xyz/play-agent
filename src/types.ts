@@ -7,10 +7,26 @@ export const workMapNodeKinds = [
   'risk',
   'question',
   'action',
+  'kanban_card',
+  'c4_container',
   'lesson',
 ] as const;
 
 export type WorkMapNodeKind = (typeof workMapNodeKinds)[number];
+
+export const workMapNodeKindDescriptions = {
+  claim: 'A conclusion, finding, or recommendation.',
+  evidence: 'An observation or source that supports or contradicts a claim.',
+  option: 'A candidate path that has not been selected.',
+  decision: 'A selected or committed direction.',
+  assumption: 'An unverified premise the work relies on.',
+  risk: 'A possible failure mode or material concern.',
+  question: 'An unresolved inquiry.',
+  action: 'A recommended next step that is not formally tracked.',
+  kanban_card: 'A formally tracked, independently actionable work item.',
+  c4_container: 'A C4 application or data store, such as a service or database.',
+  lesson: 'A durable insight worth carrying forward.',
+} as const satisfies Record<WorkMapNodeKind, string>;
 
 export const workMapRelations = [
   'supports',

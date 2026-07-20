@@ -1,6 +1,6 @@
 {
   "name": "play-agent",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "description": "A Codex Plugin for inspectable reasoning maps and independent review workflows.",
   "homepage": "https://github.com/oi-xyz/play-agent#readme",

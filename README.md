@@ -50,7 +50,13 @@ The node taxonomy is intentionally compact:
 | `risk` | A failure mode or material concern |
 | `question` | An unresolved inquiry |
 | `action` | Concrete follow-up work |
+| `kanban_card` | A formally tracked, independently actionable work item |
+| `c4_container` | An application or data store at the C4 container abstraction |
 | `lesson` | A durable insight worth carrying forward |
+
+The two specialized kinds are deliberately narrow. `action` remains an inferred or recommended next step; use `kanban_card` only when that work is explicitly being tracked. `c4_container` means a C4 application or data store such as a service, web app, database, or queue, not an arbitrary module or function. These kinds do not imply a complete Kanban board or C4 modeling system, and they remain flat peers in the type filter.
+
+The App explains these meanings where they are needed: the type filter includes a concise definition for every type present in the map, node type badges expose the same definition on hover or keyboard focus, and node details keep it visible for touch users. All three surfaces use the shared registry in `src/types.ts`.
 
 ### Confidence
 
@@ -60,7 +66,7 @@ Only `claim`, `assumption`, and `lesson` express inferential judgments, so only 
 - a concise `confidenceBasis` explaining why that level was chosen;
 - one to three `uncertaintyReasons` whenever confidence is medium or low.
 
-Evidence relies on inspectable references and provenance instead. Decisions are commitments, risks are failure modes, and actions are work; applying a generic confidence value to them would blur distinct concepts. Confidence remains an agent-authored judgment, not proof or independent verification.
+Evidence relies on inspectable references and provenance instead. Decisions are commitments, risks are failure modes, and actions and Kanban cards are work; C4 containers are architecture elements. Applying a generic confidence value to them would blur distinct concepts. Confidence remains an agent-authored judgment, not proof or independent verification.
 
 Relations are directed and read from `from` to `to`:
 
@@ -80,7 +86,7 @@ References are attached to nodes and use exactly one inspectable location: `path
 1. The user asks Codex to perform substantial work.
 2. Codex calls `present_work_map` when relationships, evidence, alternatives, or follow-up work materially benefit from a map.
 3. The MCP host renders `ui://play-agent/work-map.html` inline.
-4. The user searches, filters, pans, zooms, opens a node to inspect its complete content, or expands the Work Map into the host's fullscreen surface when available.
+4. The user searches, filters, pans, zooms, opens a node to inspect its complete content, pins the active Work Map in the host's picture-in-picture surface, or expands it fullscreen when available.
 5. In hosts that support the Apps SDK bridge, the user can choose `Ask why`, `Challenge`, or `Continue`; reviewer nodes additionally support `Accept`, `Reject`, and `Accept & handoff`. The MCP App sends the explicit user decision to the host conversation.
 
 The tool should not be called for simple answers where a map adds no inspection value.
@@ -150,7 +156,7 @@ The App contains only the Work Map surface. It provides:
 - smooth, directed, labeled edges and deterministic Dagre layout;
 - search, multi-type highlighting with relationship context, fit view, explicit zoom controls, pinch-to-zoom, and drag-to-pan;
 - host-first scrolling: ordinary wheel and trackpad scrolling stays with the Codex conversation instead of zooming the inline map;
-- host-native fullscreen: a capability-gated toolbar action requests the host's fullscreen surface, preserves map context, and fits the graph to the expanded viewport;
+- host-native display modes: capability-gated toolbar actions pin the active map in picture-in-picture or expand it fullscreen, preserve map context, and fit the graph to each viewport;
 - single-click relationship highlighting that preserves the full map and its deterministic global layout;
 - an explicit `View details` action that does not replace the current relationship selection;
 - view reset; nodes are not manually draggable;

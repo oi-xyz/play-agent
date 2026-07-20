@@ -215,7 +215,8 @@ const toolInputSchema = {
           kind: {
             type: 'string',
             enum: workMapNodeKinds,
-            description: 'Claims, assumptions, and lessons also require confidence and confidenceBasis.',
+            description:
+              'Use kanban_card only for a formally tracked, independently actionable work item; use c4_container only for a C4 application or data store. Claims, assumptions, and lessons also require confidence and confidenceBasis.',
           },
           title: {type: 'string', description: 'A concise statement, not a category label.'},
           body: {type: 'string', description: 'Optional context that materially improves review.'},
@@ -402,7 +403,7 @@ export function listResourcesResult() {
         _meta: {
           ui: {csp: {}, prefersBorder: true},
           'openai/widgetDescription':
-            'A focused work map showing claims, evidence, options, decisions, assumptions, risks, questions, actions, and lessons with provenance and references.',
+            'A focused work map showing reasoning, tracked work, C4 containers, provenance, references, and their explicit relationships.',
           'openai/widgetPrefersBorder': true,
         },
       },
@@ -421,7 +422,7 @@ export function readResourceResult(uri: string) {
         _meta: {
           ui: {csp: {}, prefersBorder: true},
           'openai/widgetDescription':
-            'A focused work map showing claims, evidence, options, decisions, assumptions, risks, questions, actions, and lessons with provenance and references.',
+            'A focused work map showing reasoning, tracked work, C4 containers, provenance, references, and their explicit relationships.',
           'openai/widgetPrefersBorder': true,
         },
       },
@@ -488,7 +489,7 @@ export async function handleMcpRequest(request: JsonRpcRequest): Promise<JsonRpc
         return success(request.id, {
           protocolVersion: '2025-06-18',
           capabilities: {tools: {}, resources: {}},
-          serverInfo: {name: 'play-agent', version: '0.1.4'},
+          serverInfo: {name: 'play-agent', version: '0.1.5'},
         });
       case 'ping':
         return success(request.id, {});

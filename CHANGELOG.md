@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.5 - 2026-07-20
+
+- Add a host-native picture-in-picture mode so users can keep the active Work Map visible while continuing the conversation.
+- Add explicit PiP-to-fullscreen and fullscreen-to-PiP transitions that preserve map context.
+- Use a compact PiP toolbar and fit the graph to the floating viewport without adding persistence or historical-widget substitutes.
+- Respect the host's advertised display modes and surface rejected mode requests instead of leaving display controls silently unresponsive.
+- Add flat `kanban_card` and `c4_container` node kinds with explicit, narrow semantics and distinct map colors.
+- Explain node types in the filter, on node hover or keyboard focus, and in node details without adding taxonomy levels or a persistent legend.
+
 ## 0.1.4 - 2026-07-19
 
 - Add a capability-gated toolbar action for the host's native fullscreen display mode.

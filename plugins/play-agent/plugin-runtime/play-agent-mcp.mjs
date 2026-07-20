@@ -16290,8 +16290,23 @@ var workMapNodeKinds = [
   "risk",
   "question",
   "action",
+  "kanban_card",
+  "c4_container",
   "lesson"
 ];
+var workMapNodeKindDescriptions = {
+  claim: "A conclusion, finding, or recommendation.",
+  evidence: "An observation or source that supports or contradicts a claim.",
+  option: "A candidate path that has not been selected.",
+  decision: "A selected or committed direction.",
+  assumption: "An unverified premise the work relies on.",
+  risk: "A possible failure mode or material concern.",
+  question: "An unresolved inquiry.",
+  action: "A recommended next step that is not formally tracked.",
+  kanban_card: "A formally tracked, independently actionable work item.",
+  c4_container: "A C4 application or data store, such as a service or database.",
+  lesson: "A durable insight worth carrying forward."
+};
 var workMapRelations = [
   "supports",
   "contradicts",
@@ -16311,6 +16326,7 @@ var confidenceNodeKinds = ["claim", "assumption", "lesson"];
 var WORK_MAP_APP_RESOURCE_URI = "ui://play-agent/work-map.html";
 var WORK_MAP_APP_MIME_TYPE = "text/html;profile=mcp-app";
 function workMapAppHtml() {
+  const nodeKindDescriptions = JSON.stringify(workMapNodeKindDescriptions).replace(/</g, "\\u003c");
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -16339,6 +16355,8 @@ function workMapAppHtml() {
       --risk: #c64343;
       --question: #984d90;
       --action: #2673c9;
+      --kanban-card: #3f7d47;
+      --c4-container: #4267a8;
       --lesson: #66717a;
       --reviewer: #a44288;
       --implementer: #2673c9;
@@ -16402,18 +16420,45 @@ function workMapAppHtml() {
       background: var(--background);
     }
 
+    html[data-display-mode="pip"],
+    html[data-display-mode="pip"] body,
     html[data-display-mode="fullscreen"],
     html[data-display-mode="fullscreen"] body {
       height: 100%;
       min-height: 0;
     }
 
+    html[data-display-mode="pip"] .work-map,
     html[data-display-mode="fullscreen"] .work-map {
       height: 100vh;
       min-height: 0;
     }
 
+    html[data-display-mode="pip"] .toolbar {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: .5rem;
+      padding: .5rem .625rem;
+    }
+
+    html[data-display-mode="pip"] .filters,
+    html[data-display-mode="pip"] #map-role,
+    html[data-display-mode="pip"] #map-meta,
+    html[data-display-mode="pip"] #reset-view,
+    html[data-display-mode="pip"] #fit-view,
+    html[data-display-mode="pip"] .minimap {
+      display: none;
+    }
+
+    html[data-display-mode="pip"] .title-block h1 {
+      font-size: .875rem;
+    }
+
+    html[data-display-mode="pip"] .toolbar-actions {
+      grid-column: 2;
+    }
+
     .toolbar {
+      position: relative;
       display: grid;
       grid-template-columns: minmax(11rem, auto) minmax(12rem, 1fr) auto;
       align-items: center;
@@ -16569,7 +16614,7 @@ function workMapAppHtml() {
       right: 0;
       z-index: 20;
       display: grid;
-      width: 13rem;
+      width: min(20rem, calc(100vw - 1rem));
       max-height: min(23rem, calc(100vh - 6rem));
       overflow-y: auto;
       padding: .375rem;
@@ -16584,10 +16629,10 @@ function workMapAppHtml() {
     .type-filter-option {
       display: grid;
       grid-template-columns: auto auto minmax(0, 1fr) auto;
-      align-items: center;
+      align-items: start;
       gap: .5rem;
-      min-height: 2.25rem;
-      padding: .375rem .5rem;
+      min-height: 3.25rem;
+      padding: .5rem;
       border-radius: .375rem;
       color: var(--text);
       font-size: .8125rem;
@@ -16606,6 +16651,7 @@ function workMapAppHtml() {
       border: 1px solid var(--border-strong);
       border-radius: .2rem;
       background: var(--surface);
+      transform: translateY(.125rem);
     }
 
     .type-filter-option input::after {
@@ -16630,6 +16676,16 @@ function workMapAppHtml() {
       height: .5rem;
       border-radius: 50%;
       background: var(--kind-color);
+      transform: translateY(.3125rem);
+    }
+
+    .type-filter-label { font-weight: 600; }
+
+    .type-filter-description {
+      grid-column: 3 / 5;
+      color: var(--text-secondary);
+      font-size: .6875rem;
+      line-height: 1.35;
     }
 
     .type-filter-option small {
@@ -16693,6 +16749,29 @@ function workMapAppHtml() {
       border-color: transparent;
       background: transparent;
     }
+
+    .display-mode-status {
+      position: absolute;
+      top: calc(100% + .5rem);
+      right: 1rem;
+      max-width: min(22rem, calc(100vw - 2rem));
+      margin: 0;
+      padding: .5rem .625rem;
+      border: 1px solid var(--border-strong);
+      border-radius: .375rem;
+      background: var(--surface);
+      box-shadow: var(--shadow-med);
+      color: var(--text-secondary);
+      font-size: .75rem;
+      line-height: 1.35;
+    }
+
+    .display-mode-status[data-tone="error"] {
+      border-color: var(--risk);
+      color: var(--risk);
+    }
+
+    .display-mode-status[hidden] { display: none; }
 
     .icon-button:disabled {
       cursor: default;
@@ -16885,6 +16964,24 @@ function workMapAppHtml() {
       font-weight: 600;
     }
 
+    .kind-tooltip {
+      position: fixed;
+      z-index: 30;
+      width: max-content;
+      max-width: min(18rem, calc(100vw - 1rem));
+      padding: .5rem .625rem;
+      border: 1px solid var(--border-strong);
+      border-radius: .375rem;
+      background: var(--surface);
+      box-shadow: var(--shadow-med);
+      color: var(--text);
+      font-size: .75rem;
+      line-height: 1.4;
+      pointer-events: none;
+    }
+
+    .kind-tooltip[hidden] { display: none; }
+
     .origin-label { margin-left: auto; --origin-color: var(--agent); }
     .origin-reviewer { --origin-color: var(--reviewer); }
     .origin-implementer { --origin-color: var(--implementer); }
@@ -16981,6 +17078,8 @@ function workMapAppHtml() {
     .risk { --kind-color: var(--risk); }
     .question { --kind-color: var(--question); }
     .action { --kind-color: var(--action); }
+    .kanban_card { --kind-color: var(--kanban-card); }
+    .c4_container { --kind-color: var(--c4-container); }
     .lesson { --kind-color: var(--lesson); }
 
     .viewport-actions {
@@ -17085,6 +17184,14 @@ function workMapAppHtml() {
       font-size: 1.0625rem;
       line-height: 1.35;
       overflow-wrap: anywhere;
+    }
+
+    .focus-kind-description {
+      max-width: 32rem;
+      margin: .5rem 0 0;
+      color: var(--text-secondary);
+      font-size: .75rem;
+      line-height: 1.4;
     }
 
     .focus-body {
@@ -17315,10 +17422,15 @@ function workMapAppHtml() {
         <button id="fit-view" class="icon-button" type="button" title="Fit all nodes" aria-label="Fit all nodes">
           <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
         </button>
-        <button id="display-mode" class="icon-button" type="button" title="Open fullscreen" aria-label="Open fullscreen" aria-pressed="false" hidden>
-          <svg data-display-icon="enter" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-          <svg data-display-icon="exit" viewBox="0 0 24 24" hidden><path d="M14 10h7V3M10 14H3v7M21 3l-7 7M3 21l7-7"/></svg>
+        <button id="pip-mode" class="icon-button" type="button" title="Pin map" aria-label="Pin map" aria-pressed="false" hidden>
+          <svg data-pip-icon="pin" viewBox="0 0 24 24"><path d="M12 17v5M5 3h14M6 3v6a3 3 0 0 1-3 3v2h18v-2a3 3 0 0 1-3-3V3"/></svg>
+          <svg data-pip-icon="inline" viewBox="0 0 24 24" hidden><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3M8 12h8"/></svg>
         </button>
+        <button id="fullscreen-mode" class="icon-button" type="button" title="Open fullscreen" aria-label="Open fullscreen" aria-pressed="false" hidden>
+          <svg data-fullscreen-icon="enter" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+          <svg data-fullscreen-icon="exit" viewBox="0 0 24 24" hidden><path d="M14 10h7V3M10 14H3v7M21 3l-7 7M3 21l7-7"/></svg>
+        </button>
+        <p id="display-mode-status" class="display-mode-status" role="status" aria-live="polite" hidden></p>
       </div>
     </header>
 
@@ -17354,6 +17466,7 @@ function workMapAppHtml() {
                 <span id="focus-origin" class="origin-label">Agent</span>
               </div>
               <h2 id="focus-title"></h2>
+              <p id="focus-kind-description" class="focus-kind-description"></p>
             </div>
             <button id="close-focus" class="icon-button" type="button" title="Close" aria-label="Close node details">
               <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -17413,6 +17526,7 @@ function workMapAppHtml() {
           </footer>
         </article>
       </div>
+      <div id="kind-tooltip" class="kind-tooltip" role="tooltip" hidden></div>
     </section>
   </main>
 
@@ -17423,6 +17537,7 @@ function workMapAppHtml() {
     const MIN_ZOOM = .16;
     const MAX_ZOOM = 1.6;
     const MIN_READABLE_ZOOM = .64;
+    const nodeKindDescriptions = ${nodeKindDescriptions};
     const canvas = document.getElementById('canvas');
     const world = document.getElementById('world');
     const edgesElement = document.getElementById('edges');
@@ -17443,7 +17558,10 @@ function workMapAppHtml() {
     const minimapViewport = document.getElementById('minimap-viewport');
     const focusLayer = document.getElementById('focus-layer');
     const focusCard = document.getElementById('focus-card');
-    const displayModeButton = document.getElementById('display-mode');
+    const pipModeButton = document.getElementById('pip-mode');
+    const fullscreenModeButton = document.getElementById('fullscreen-mode');
+    const displayModeStatus = document.getElementById('display-mode-status');
+    const kindTooltip = document.getElementById('kind-tooltip');
     const initId = 'play-agent-init-' + Math.random().toString(36).slice(2);
 
     let snapshot = null;
@@ -17457,7 +17575,10 @@ function workMapAppHtml() {
     let minimapViewBox = {x: 0, y: 0, width: 1, height: 1};
     let minimapDragging = false;
     let currentDisplayMode = null;
+    let hostContext = null;
+    let fullscreenReturnMode = 'inline';
     let displayModeRequestPending = false;
+    let displayModeStatusTimer = null;
 
     function sendHostMessage(message) {
       if (window.parent && window.parent !== window) window.parent.postMessage(message, '*');
@@ -17467,7 +17588,11 @@ function workMapAppHtml() {
       jsonrpc: '2.0',
       id: initId,
       method: 'ui/initialize',
-      params: {appCapabilities: {availableDisplayModes: ['inline', 'fullscreen']}},
+      params: {
+        protocolVersion: '2026-01-26',
+        appInfo: {name: 'play-agent-work-map', title: 'Play Agent Work Map', version: '0.1.5'},
+        appCapabilities: {availableDisplayModes: ['inline', 'pip', 'fullscreen']},
+      },
     });
 
     function escapeHtml(value) {
@@ -17478,6 +17603,33 @@ function workMapAppHtml() {
 
     function displayLabel(value) {
       return String(value || '').replaceAll('_', ' ').replace(/\\b\\w/g, function (letter) { return letter.toUpperCase(); });
+    }
+
+    function kindDescription(kind) {
+      return nodeKindDescriptions[kind] || 'A semantic element in this work map.';
+    }
+
+    function showKindTooltip(badge) {
+      const kind = badge?.dataset.kind;
+      if (!kind) return;
+      kindTooltip.textContent = kindDescription(kind);
+      kindTooltip.hidden = false;
+      const badgeRect = badge.getBoundingClientRect();
+      const tooltipRect = kindTooltip.getBoundingClientRect();
+      const left = Math.min(
+        Math.max(.5 * 16, badgeRect.left),
+        window.innerWidth - tooltipRect.width - .5 * 16,
+      );
+      const preferredTop = badgeRect.bottom + .375 * 16;
+      const top = preferredTop + tooltipRect.height <= window.innerHeight - .5 * 16
+        ? preferredTop
+        : badgeRect.top - tooltipRect.height - .375 * 16;
+      kindTooltip.style.left = left + 'px';
+      kindTooltip.style.top = Math.max(.5 * 16, top) + 'px';
+    }
+
+    function hideKindTooltip() {
+      kindTooltip.hidden = true;
     }
 
     function referenceLocation(reference) {
@@ -17498,48 +17650,112 @@ function workMapAppHtml() {
       if (!snapshot) return;
       requestAnimationFrame(function () {
         requestAnimationFrame(function () {
-          if (currentDisplayMode === 'fullscreen') fitView();
-          else initialView();
+          if (currentDisplayMode === 'inline') initialView();
+          else fitView();
         });
       });
     }
 
+    function isDisplayMode(value) {
+      return value === 'inline' || value === 'pip' || value === 'fullscreen';
+    }
+
+    function mergeHostContext(nextContext) {
+      if (!nextContext || typeof nextContext !== 'object') return;
+      hostContext = {...(hostContext || {}), ...nextContext};
+      updateDisplayModeControl();
+    }
+
+    function supportsDisplayMode(mode) {
+      return Array.isArray(hostContext?.availableDisplayModes)
+        && hostContext.availableDisplayModes.includes(mode);
+    }
+
+    function showDisplayModeStatus(message, tone) {
+      if (displayModeStatusTimer) clearTimeout(displayModeStatusTimer);
+      displayModeStatus.textContent = message;
+      displayModeStatus.dataset.tone = tone || 'neutral';
+      displayModeStatus.hidden = false;
+      displayModeStatusTimer = setTimeout(function () {
+        displayModeStatus.hidden = true;
+        displayModeStatusTimer = null;
+      }, 5000);
+    }
+
     function updateDisplayModeControl() {
       const bridge = window.openai;
-      const nextMode = bridge?.displayMode || 'inline';
+      const nextMode = isDisplayMode(hostContext?.displayMode) ? hostContext.displayMode : 'inline';
       const modeChanged = currentDisplayMode !== nextMode;
+      if (modeChanged && nextMode === 'fullscreen' && currentDisplayMode !== 'fullscreen') {
+        fullscreenReturnMode = currentDisplayMode === 'pip' ? 'pip' : 'inline';
+      } else if (modeChanged && nextMode !== 'fullscreen') {
+        fullscreenReturnMode = nextMode === 'pip' ? 'pip' : 'inline';
+      }
       currentDisplayMode = nextMode;
       document.documentElement.dataset.displayMode = nextMode;
 
-      const supported = typeof bridge?.requestDisplayMode === 'function';
-      displayModeButton.hidden = !supported;
-      if (!supported) return;
+      const hasRequestApi = typeof bridge?.requestDisplayMode === 'function';
+      const pipSupported = hasRequestApi && supportsDisplayMode('pip');
+      const fullscreenSupported = hasRequestApi && supportsDisplayMode('fullscreen');
+      pipModeButton.hidden = !pipSupported || nextMode === 'fullscreen';
+      fullscreenModeButton.hidden = !fullscreenSupported;
+      if (!hasRequestApi) return;
 
+      const pip = nextMode === 'pip';
       const fullscreen = nextMode === 'fullscreen';
-      const label = fullscreen ? 'Exit fullscreen' : 'Open fullscreen';
-      displayModeButton.title = label;
-      displayModeButton.setAttribute('aria-label', label);
-      displayModeButton.setAttribute('aria-pressed', String(fullscreen));
-      displayModeButton.querySelector('[data-display-icon="enter"]').hidden = fullscreen;
-      displayModeButton.querySelector('[data-display-icon="exit"]').hidden = !fullscreen;
-      displayModeButton.disabled = displayModeRequestPending;
+      const pipLabel = pip ? 'Return inline' : 'Pin map';
+      const fullscreenLabel = fullscreen
+        ? (fullscreenReturnMode === 'pip' ? 'Return to picture-in-picture' : 'Exit fullscreen')
+        : 'Open fullscreen';
+
+      pipModeButton.title = pipLabel;
+      pipModeButton.setAttribute('aria-label', pipLabel);
+      pipModeButton.setAttribute('aria-pressed', String(pip));
+      pipModeButton.querySelector('[data-pip-icon="pin"]').hidden = pip;
+      pipModeButton.querySelector('[data-pip-icon="inline"]').hidden = !pip;
+      pipModeButton.disabled = displayModeRequestPending;
+
+      fullscreenModeButton.title = fullscreenLabel;
+      fullscreenModeButton.setAttribute('aria-label', fullscreenLabel);
+      fullscreenModeButton.setAttribute('aria-pressed', String(fullscreen));
+      fullscreenModeButton.querySelector('[data-fullscreen-icon="enter"]').hidden = fullscreen;
+      fullscreenModeButton.querySelector('[data-fullscreen-icon="exit"]').hidden = !fullscreen;
+      fullscreenModeButton.disabled = displayModeRequestPending;
       if (modeChanged) scheduleViewForDisplayMode();
     }
 
-    async function toggleDisplayMode() {
+    async function requestDisplayMode(nextMode) {
       const bridge = window.openai;
       if (displayModeRequestPending || typeof bridge?.requestDisplayMode !== 'function') return;
+      if (!supportsDisplayMode(nextMode)) {
+        showDisplayModeStatus('This display mode is not available in the current host.', 'error');
+        return;
+      }
       displayModeRequestPending = true;
       updateDisplayModeControl();
       try {
-        const nextMode = currentDisplayMode === 'fullscreen' ? 'inline' : 'fullscreen';
-        await bridge.requestDisplayMode({mode: nextMode});
+        const result = await bridge.requestDisplayMode({mode: nextMode});
+        const grantedMode = isDisplayMode(result?.mode) ? result.mode : null;
+        if (!grantedMode) throw new Error('The host did not return a display mode.');
+        mergeHostContext({displayMode: grantedMode});
+        if (grantedMode !== nextMode) {
+          showDisplayModeStatus('The host kept the map in ' + grantedMode + ' mode.', 'error');
+        }
       } catch (error) {
         console.warn('The host declined the display mode request.', error);
+        showDisplayModeStatus(error instanceof Error ? error.message : 'The host declined the display mode request.', 'error');
       } finally {
         displayModeRequestPending = false;
         updateDisplayModeControl();
       }
+    }
+
+    function togglePipMode() {
+      return requestDisplayMode(currentDisplayMode === 'pip' ? 'inline' : 'pip');
+    }
+
+    function toggleFullscreenMode() {
+      return requestDisplayMode(currentDisplayMode === 'fullscreen' ? fullscreenReturnMode : 'fullscreen');
     }
 
     function findSnapshot(value) {
@@ -17739,8 +17955,9 @@ function workMapAppHtml() {
           ? '<div class="confidence-note ' + (node.confidence === 'low' ? 'low' : '') + '"><span>' + escapeHtml(node.uncertaintyReasons[0]) + '</span></div>'
           : '';
         const uncertaintyClass = firstUncertainty ? ' has-uncertainty' : '';
-        return '<article class="node ' + escapeHtml(node.kind) + selected + relationshipState + typeState + uncertaintyClass + '" tabindex="0" data-node-id="' + escapeHtml(node.id) + '" data-origin="' + escapeHtml(node.origin) + '" aria-label="Select node: ' + escapeHtml(node.title) + '" style="left:' + position.x + 'px;top:' + position.y + 'px">' +
-          '<div class="node-header"><span class="kind-label">' + escapeHtml(displayLabel(node.kind)) + '</span>' + confidenceBadge(node) + '<span class="origin-label origin-' + escapeHtml(node.origin) + '">' + escapeHtml(displayLabel(node.origin)) + '</span></div>' +
+        const accessibleLabel = 'Select node: ' + node.title + '. Type: ' + displayLabel(node.kind) + '. ' + kindDescription(node.kind);
+        return '<article class="node ' + escapeHtml(node.kind) + selected + relationshipState + typeState + uncertaintyClass + '" tabindex="0" data-node-id="' + escapeHtml(node.id) + '" data-origin="' + escapeHtml(node.origin) + '" aria-label="' + escapeHtml(accessibleLabel) + '" style="left:' + position.x + 'px;top:' + position.y + 'px">' +
+          '<div class="node-header"><span class="kind-label" data-kind="' + escapeHtml(node.kind) + '">' + escapeHtml(displayLabel(node.kind)) + '</span>' + confidenceBadge(node) + '<span class="origin-label origin-' + escapeHtml(node.origin) + '">' + escapeHtml(displayLabel(node.origin)) + '</span></div>' +
           '<div class="node-copy"><h2>' + escapeHtml(node.title) + '</h2><p>' + escapeHtml(node.body) + '</p>' + firstUncertainty + '</div>' +
           '<div class="node-footer">' + references + '<button class="node-details-button" type="button" data-details-id="' + escapeHtml(node.id) + '">Details<svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button></div>' +
         '</article>';
@@ -17874,6 +18091,7 @@ function workMapAppHtml() {
       detailNodeId = node.id;
       focusCard.className = 'focus-card ' + node.kind;
       document.getElementById('focus-kind').textContent = displayLabel(node.kind);
+      document.getElementById('focus-kind-description').textContent = kindDescription(node.kind);
       const origin = document.getElementById('focus-origin');
       origin.className = 'origin-label origin-' + node.origin;
       origin.textContent = displayLabel(node.origin);
@@ -17973,7 +18191,8 @@ function workMapAppHtml() {
       typeFilterMenu.innerHTML = kinds.map(function (kind) {
         return '<label class="type-filter-option ' + escapeHtml(kind) + '">' +
           '<input type="checkbox" value="' + escapeHtml(kind) + '"' + (highlightedKinds.has(kind) ? ' checked' : '') + ' />' +
-          '<i></i><span>' + escapeHtml(displayLabel(kind)) + '</span><small>' + counts.get(kind) + '</small>' +
+          '<i></i><span class="type-filter-label">' + escapeHtml(displayLabel(kind)) + '</span><small>' + counts.get(kind) + '</small>' +
+          '<span class="type-filter-description">' + escapeHtml(kindDescription(kind)) + '</span>' +
         '</label>';
       }).join('') + '<button id="clear-types" class="clear-types" type="button">Clear highlights</button>';
       updateTypeFilterTrigger();
@@ -18045,6 +18264,19 @@ function workMapAppHtml() {
       const node = nodeById(element.getAttribute('data-node-id'));
       if (node) selectNode(node);
     });
+    nodesElement.addEventListener('pointerover', function (event) {
+      const badge = event.target.closest('.kind-label[data-kind]');
+      if (badge) showKindTooltip(badge);
+    });
+    nodesElement.addEventListener('pointerout', function (event) {
+      if (event.target.closest('.kind-label[data-kind]')) hideKindTooltip();
+    });
+    nodesElement.addEventListener('focusin', function (event) {
+      const node = event.target.closest('.node');
+      const badge = node?.querySelector('.kind-label[data-kind]');
+      if (badge) showKindTooltip(badge);
+    });
+    nodesElement.addEventListener('focusout', hideKindTooltip);
 
     nodesElement.addEventListener('keydown', function (event) {
       if (event.target.closest('[data-details-id]')) return;
@@ -18111,7 +18343,8 @@ function workMapAppHtml() {
     });
     document.getElementById('fit-view').addEventListener('click', fitView);
     document.getElementById('reset-view').addEventListener('click', resetView);
-    displayModeButton.addEventListener('click', toggleDisplayMode);
+    pipModeButton.addEventListener('click', togglePipMode);
+    fullscreenModeButton.addEventListener('click', toggleFullscreenMode);
     document.getElementById('zoom-in').addEventListener('click', function () {
       const rect = canvas.getBoundingClientRect();
       setZoom(transform.scale * 1.18, rect.width / 2, rect.height / 2);
@@ -18171,27 +18404,36 @@ function workMapAppHtml() {
     });
 
     window.addEventListener('resize', function () {
-      if (currentDisplayMode === 'fullscreen') fitView();
-      else initialView();
+      if (currentDisplayMode === 'inline') initialView();
+      else fitView();
     });
 
     function renderFromOpenAiBridge() {
       const bridge = window.openai;
       if (!bridge) return;
-      updateDisplayModeControl();
+      if (isDisplayMode(bridge.displayMode)) mergeHostContext({displayMode: bridge.displayMode});
       const found = findSnapshot(bridge.toolOutput) || findSnapshot(bridge.toolResponseMetadata) || findSnapshot(bridge);
       if (found) render(found);
     }
 
     window.addEventListener('message', function (event) {
+      if (event.source !== window.parent) return;
       if (event.data?.id === initId && event.data?.result) {
+        mergeHostContext(event.data.result.hostContext);
         sendHostMessage({jsonrpc: '2.0', method: 'ui/notifications/initialized', params: {}});
+      }
+      if (event.data?.id === initId && event.data?.error) {
+        showDisplayModeStatus('The host did not complete MCP App initialization.', 'error');
+      }
+      if (event.data?.method === 'ui/notifications/host-context-changed') {
+        mergeHostContext(event.data.params);
       }
       const found = findSnapshot(event.data);
       if (found) render(found);
     });
     window.addEventListener('openai:set_globals', function (event) {
-      updateDisplayModeControl();
+      const globals = event.detail?.globals;
+      if (isDisplayMode(globals?.displayMode)) mergeHostContext({displayMode: globals.displayMode});
       const found = findSnapshot(event.detail);
       if (found) render(found);
       renderFromOpenAiBridge();
@@ -18369,7 +18611,7 @@ var toolInputSchema = {
           kind: {
             type: "string",
             enum: workMapNodeKinds,
-            description: "Claims, assumptions, and lessons also require confidence and confidenceBasis."
+            description: "Use kanban_card only for a formally tracked, independently actionable work item; use c4_container only for a C4 application or data store. Claims, assumptions, and lessons also require confidence and confidenceBasis."
           },
           title: { type: "string", description: "A concise statement, not a category label." },
           body: { type: "string", description: "Optional context that materially improves review." },
@@ -18544,7 +18786,7 @@ function listResourcesResult() {
         mimeType: WORK_MAP_APP_MIME_TYPE,
         _meta: {
           ui: { csp: {}, prefersBorder: true },
-          "openai/widgetDescription": "A focused work map showing claims, evidence, options, decisions, assumptions, risks, questions, actions, and lessons with provenance and references.",
+          "openai/widgetDescription": "A focused work map showing reasoning, tracked work, C4 containers, provenance, references, and their explicit relationships.",
           "openai/widgetPrefersBorder": true
         }
       }
@@ -18561,7 +18803,7 @@ function readResourceResult(uri) {
         text: workMapAppHtml(),
         _meta: {
           ui: { csp: {}, prefersBorder: true },
-          "openai/widgetDescription": "A focused work map showing claims, evidence, options, decisions, assumptions, risks, questions, actions, and lessons with provenance and references.",
+          "openai/widgetDescription": "A focused work map showing reasoning, tracked work, C4 containers, provenance, references, and their explicit relationships.",
           "openai/widgetPrefersBorder": true
         }
       }
@@ -18622,7 +18864,7 @@ async function handleMcpRequest(request) {
         return success2(request.id, {
           protocolVersion: "2025-06-18",
           capabilities: { tools: {}, resources: {} },
-          serverInfo: { name: "play-agent", version: "0.1.4" }
+          serverInfo: { name: "play-agent", version: "0.1.5" }
         });
       case "ping":
         return success2(request.id, {});

@@ -38,7 +38,7 @@ Play Agent should not:
 
 Play Agent should:
 
-- expose claims, evidence, assumptions, options, decisions, risks, questions, actions, and lessons;
+- expose claims, evidence, assumptions, options, decisions, risks, questions, actions, lessons, tracked Kanban work, and C4 containers;
 - preserve whether a node came from the user, agent, implementer, or reviewer;
 - make references inspectable;
 - let the user ask, challenge, or continue from a node through host-native follow-up;

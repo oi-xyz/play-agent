@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {createWorkMapSnapshot, workMapNodeSize} from './workMap';
-import {workMapNodeKinds, workMapRelations} from './types';
+import {workMapNodeKindDescriptions, workMapNodeKinds, workMapRelations} from './types';
 import type {PresentWorkMapInput} from './types';
 
 const input: PresentWorkMapInput = {
@@ -121,6 +121,8 @@ test('taxonomy remains compact and excludes ambiguous aliases', () => {
     'risk',
     'question',
     'action',
+    'kanban_card',
+    'c4_container',
     'lesson',
   ]);
   assert.deepEqual(workMapRelations, [
@@ -134,6 +136,7 @@ test('taxonomy remains compact and excludes ambiguous aliases', () => {
     'leads_to',
     'alternative_to',
   ]);
+  assert.deepEqual(Object.keys(workMapNodeKindDescriptions), [...workMapNodeKinds]);
 });
 
 test('Dagre lays out a 24-node cyclic graph without node overlap', () => {
