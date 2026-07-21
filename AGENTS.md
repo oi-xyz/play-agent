@@ -3,7 +3,7 @@
 This project is intentionally Codex-Plugin-first:
 
 - Product stage rule: this project is unreleased and has no backward-compatibility burden. When product direction, architecture, storage shape, or UI language needs to change, prefer the clearest design now. It is acceptable to delete, reshape, or replace old data structures, UI flows, docs, tests, local storage formats, and prototype code instead of preserving historical behavior.
-- Play Agent is not a standalone frontend website. Do not reintroduce Vite/React app routes, browser-only demos, or a separate session-management UI.
+- Play Agent is not a standalone frontend website. Do not reintroduce Vite/React app routes or a separate session-management UI. A generated, static GitHub Pages showcase is allowed only as documentation for representative Work Maps; it must reuse the production MCP App renderer, contain no product-only behavior, and clearly distinguish itself from the live Codex host experience.
 - The distributable product is a Codex Plugin containing focused workflow skills and a bundled local MCP server. The server exposes an MCP App resource that the host renders inline at `ui://play-agent/work-map.html`.
 - Keep the checked-in `plugins/play-agent/plugin-runtime/play-agent-mcp.mjs` bundle synchronized through `npm run build`; plugin installs must not depend on running `npm install` inside the plugin cache.
 - The server must not manage Codex sessions or retain a latest-map pointer. It only validates, lays out, and returns the map explicitly passed to the MCP tool.

@@ -1,10 +1,14 @@
-import {workMapNodeKindDescriptions} from '../src/types';
+import {workMapNodeKindColors, workMapNodeKindDescriptions} from '../src/types';
 
 export const WORK_MAP_APP_RESOURCE_URI = 'ui://play-agent/work-map.html';
 export const WORK_MAP_APP_MIME_TYPE = 'text/html;profile=mcp-app';
 
 export function workMapAppHtml() {
   const nodeKindDescriptions = JSON.stringify(workMapNodeKindDescriptions).replace(/</g, '\\u003c');
+  const nodeKindCssVariables = (mode: keyof typeof workMapNodeKindColors) =>
+    Object.entries(workMapNodeKindColors[mode])
+      .map(([kind, color]) => `--${kind.replaceAll('_', '-')}: ${color};`)
+      .join('\n      ');
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -25,17 +29,7 @@ export function workMapAppHtml() {
       --accent-muted: #e8f1ff;
       --edge: #9c9c95;
       --grid-dot: #d4d4ce;
-      --claim: #5c55c7;
-      --evidence: #c87517;
-      --option: #4a728f;
-      --decision: #13877b;
-      --assumption: #8d5e2f;
-      --risk: #c64343;
-      --question: #984d90;
-      --action: #2673c9;
-      --kanban-card: #3f7d47;
-      --c4-container: #4267a8;
-      --lesson: #66717a;
+      ${nodeKindCssVariables('light')}
       --reviewer: #a44288;
       --implementer: #2673c9;
       --agent: #5c55c7;
@@ -60,6 +54,7 @@ export function workMapAppHtml() {
         --accent-muted: #1d3553;
         --edge: #73736c;
         --grid-dot: #34342f;
+        ${nodeKindCssVariables('dark')}
         --shadow-low: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 12px rgba(0, 0, 0, .18);
         --shadow-med: 0 12px 38px rgba(0, 0, 0, .5);
       }
@@ -1268,7 +1263,7 @@ export function workMapAppHtml() {
       method: 'ui/initialize',
       params: {
         protocolVersion: '2026-01-26',
-        appInfo: {name: 'play-agent-work-map', title: 'Play Agent Work Map', version: '0.1.5'},
+        appInfo: {name: 'play-agent-work-map', title: 'Play Agent Work Map', version: '0.1.6'},
         appCapabilities: {availableDisplayModes: ['inline', 'pip', 'fullscreen']},
       },
     });

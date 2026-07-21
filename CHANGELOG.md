@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.6 - Unreleased
+
+- Replace overlapping node type colors with distinct, mode-specific palettes for light and dark hosts.
+- Add automated perceptual-distance and tag-contrast gates so future type colors cannot silently become ambiguous.
+
 ## 0.1.5 - 2026-07-20
 
 - Add a host-native picture-in-picture mode so users can keep the active Work Map visible while continuing the conversation.

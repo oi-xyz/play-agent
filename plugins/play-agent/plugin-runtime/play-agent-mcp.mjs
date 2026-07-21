@@ -16307,6 +16307,34 @@ var workMapNodeKindDescriptions = {
   c4_container: "A C4 application or data store, such as a service or database.",
   lesson: "A durable insight worth carrying forward."
 };
+var workMapNodeKindColors = {
+  light: {
+    claim: "#6100bb",
+    evidence: "#8c6100",
+    option: "#895284",
+    decision: "#3c4900",
+    assumption: "#800c00",
+    risk: "#dc002f",
+    question: "#cf00c9",
+    action: "#0055ff",
+    kanban_card: "#008700",
+    c4_container: "#007e9b",
+    lesson: "#232323"
+  },
+  dark: {
+    claim: "#a77bff",
+    evidence: "#eba941",
+    option: "#f0bfea",
+    decision: "#00f8ff",
+    assumption: "#8d894e",
+    risk: "#ff5c75",
+    question: "#ff68ff",
+    action: "#008dff",
+    kanban_card: "#00ac00",
+    c4_container: "#00b8b9",
+    lesson: "#fafafa"
+  }
+};
 var workMapRelations = [
   "supports",
   "contradicts",
@@ -16327,6 +16355,7 @@ var WORK_MAP_APP_RESOURCE_URI = "ui://play-agent/work-map.html";
 var WORK_MAP_APP_MIME_TYPE = "text/html;profile=mcp-app";
 function workMapAppHtml() {
   const nodeKindDescriptions = JSON.stringify(workMapNodeKindDescriptions).replace(/</g, "\\u003c");
+  const nodeKindCssVariables = (mode) => Object.entries(workMapNodeKindColors[mode]).map(([kind, color]) => `--${kind.replaceAll("_", "-")}: ${color};`).join("\n      ");
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -16347,17 +16376,7 @@ function workMapAppHtml() {
       --accent-muted: #e8f1ff;
       --edge: #9c9c95;
       --grid-dot: #d4d4ce;
-      --claim: #5c55c7;
-      --evidence: #c87517;
-      --option: #4a728f;
-      --decision: #13877b;
-      --assumption: #8d5e2f;
-      --risk: #c64343;
-      --question: #984d90;
-      --action: #2673c9;
-      --kanban-card: #3f7d47;
-      --c4-container: #4267a8;
-      --lesson: #66717a;
+      ${nodeKindCssVariables("light")}
       --reviewer: #a44288;
       --implementer: #2673c9;
       --agent: #5c55c7;
@@ -16382,6 +16401,7 @@ function workMapAppHtml() {
         --accent-muted: #1d3553;
         --edge: #73736c;
         --grid-dot: #34342f;
+        ${nodeKindCssVariables("dark")}
         --shadow-low: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 12px rgba(0, 0, 0, .18);
         --shadow-med: 0 12px 38px rgba(0, 0, 0, .5);
       }
@@ -17590,7 +17610,7 @@ function workMapAppHtml() {
       method: 'ui/initialize',
       params: {
         protocolVersion: '2026-01-26',
-        appInfo: {name: 'play-agent-work-map', title: 'Play Agent Work Map', version: '0.1.5'},
+        appInfo: {name: 'play-agent-work-map', title: 'Play Agent Work Map', version: '0.1.6'},
         appCapabilities: {availableDisplayModes: ['inline', 'pip', 'fullscreen']},
       },
     });
@@ -18864,7 +18884,7 @@ async function handleMcpRequest(request) {
         return success2(request.id, {
           protocolVersion: "2025-06-18",
           capabilities: { tools: {}, resources: {} },
-          serverInfo: { name: "play-agent", version: "0.1.5" }
+          serverInfo: { name: "play-agent", version: "0.1.6" }
         });
       case "ping":
         return success2(request.id, {});

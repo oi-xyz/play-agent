@@ -28,6 +28,35 @@ export const workMapNodeKindDescriptions = {
   lesson: 'A durable insight worth carrying forward.',
 } as const satisfies Record<WorkMapNodeKind, string>;
 
+export const workMapNodeKindColors = {
+  light: {
+    claim: '#6100bb',
+    evidence: '#8c6100',
+    option: '#895284',
+    decision: '#3c4900',
+    assumption: '#800c00',
+    risk: '#dc002f',
+    question: '#cf00c9',
+    action: '#0055ff',
+    kanban_card: '#008700',
+    c4_container: '#007e9b',
+    lesson: '#232323',
+  },
+  dark: {
+    claim: '#a77bff',
+    evidence: '#eba941',
+    option: '#f0bfea',
+    decision: '#00f8ff',
+    assumption: '#8d894e',
+    risk: '#ff5c75',
+    question: '#ff68ff',
+    action: '#008dff',
+    kanban_card: '#00ac00',
+    c4_container: '#00b8b9',
+    lesson: '#fafafa',
+  },
+} as const satisfies Record<'light' | 'dark', Record<WorkMapNodeKind, `#${string}`>>;
+
 export const workMapRelations = [
   'supports',
   'contradicts',

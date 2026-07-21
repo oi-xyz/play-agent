@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {createWorkMapSnapshot, workMapNodeSize} from './workMap';
-import {workMapNodeKindDescriptions, workMapNodeKinds, workMapRelations} from './types';
+import {workMapNodeKindColors, workMapNodeKindDescriptions, workMapNodeKinds, workMapRelations} from './types';
 import type {PresentWorkMapInput} from './types';
 
 const input: PresentWorkMapInput = {
@@ -32,6 +32,50 @@ const input: PresentWorkMapInput = {
     {from: 'decision-mcp-first', to: 'action-real-task', relation: 'leads_to'},
   ],
 };
+
+type Rgb = [number, number, number];
+
+function hexToRgb(value: string): Rgb {
+  return [1, 3, 5].map((index) => Number.parseInt(value.slice(index, index + 2), 16) / 255) as Rgb;
+}
+
+function linearChannel(channel: number) {
+  return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+}
+
+function oklab(rgb: Rgb): Rgb {
+  const [red, green, blue] = rgb.map(linearChannel);
+  const long = Math.cbrt(0.4122214708 * red + 0.5363325363 * green + 0.0514459929 * blue);
+  const medium = Math.cbrt(0.2119034982 * red + 0.6806995451 * green + 0.1073969566 * blue);
+  const short = Math.cbrt(0.0883024619 * red + 0.2817188376 * green + 0.6299787005 * blue);
+  return [
+    0.2104542553 * long + 0.793617785 * medium - 0.0040720468 * short,
+    1.9779984951 * long - 2.428592205 * medium + 0.4505937099 * short,
+    0.0259040371 * long + 0.7827717662 * medium - 0.808675766 * short,
+  ];
+}
+
+function perceptualDistance(first: Rgb, second: Rgb) {
+  const firstLab = oklab(first);
+  const secondLab = oklab(second);
+  return Math.hypot(...firstLab.map((channel, index) => (channel - secondLab[index]) * 100));
+}
+
+function mix(first: Rgb, second: Rgb, firstWeight: number): Rgb {
+  return first.map((channel, index) => channel * firstWeight + second[index] * (1 - firstWeight)) as Rgb;
+}
+
+function relativeLuminance(rgb: Rgb) {
+  const [red, green, blue] = rgb.map(linearChannel);
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+function contrastRatio(first: Rgb, second: Rgb) {
+  const firstLuminance = relativeLuminance(first);
+  const secondLuminance = relativeLuminance(second);
+  return (Math.max(firstLuminance, secondLuminance) + 0.05) /
+    (Math.min(firstLuminance, secondLuminance) + 0.05);
+}
 
 test('createWorkMapSnapshot preserves semantics, provenance, and references', () => {
   const snapshot = createWorkMapSnapshot(input);
@@ -137,6 +181,41 @@ test('taxonomy remains compact and excludes ambiguous aliases', () => {
     'alternative_to',
   ]);
   assert.deepEqual(Object.keys(workMapNodeKindDescriptions), [...workMapNodeKinds]);
+  assert.deepEqual(Object.keys(workMapNodeKindColors.light), [...workMapNodeKinds]);
+  assert.deepEqual(Object.keys(workMapNodeKindColors.dark), [...workMapNodeKinds]);
+});
+
+test('node kind palettes remain distinguishable and readable in light and dark modes', () => {
+  const surfaces = {
+    light: {text: '#20201e', muted: '#f0f0ee'},
+    dark: {text: '#f0f0eb', muted: '#292925'},
+  } as const;
+
+  for (const mode of ['light', 'dark'] as const) {
+    const colors = workMapNodeKinds.map((kind) => ({kind, rgb: hexToRgb(workMapNodeKindColors[mode][kind])}));
+    const text = hexToRgb(surfaces[mode].text);
+    const muted = hexToRgb(surfaces[mode].muted);
+
+    for (let first = 0; first < colors.length; first += 1) {
+      const tagText = mix(colors[first].rgb, text, 0.82);
+      const tagBackground = mix(colors[first].rgb, muted, 0.1);
+      assert.ok(
+        contrastRatio(tagText, tagBackground) >= 4.5,
+        `${mode} ${colors[first].kind} tag does not meet 4.5:1 contrast`,
+      );
+
+      for (let second = first + 1; second < colors.length; second += 1) {
+        assert.ok(
+          perceptualDistance(colors[first].rgb, colors[second].rgb) >= 14,
+          `${mode} ${colors[first].kind} and ${colors[second].kind} node colors are too similar`,
+        );
+        assert.ok(
+          perceptualDistance(tagText, mix(colors[second].rgb, text, 0.82)) >= 11,
+          `${mode} ${colors[first].kind} and ${colors[second].kind} tag colors are too similar`,
+        );
+      }
+    }
+  }
 });
 
 test('Dagre lays out a 24-node cyclic graph without node overlap', () => {

@@ -1,6 +1,6 @@
 {
   "name": "play-agent",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "description": "A Codex Plugin for inspectable reasoning maps and independent review workflows.",
   "homepage": "https://github.com/oi-xyz/play-agent#readme",
@@ -19,6 +19,7 @@
     "mcp": "tsx server/playAgentMcp.ts",
     "build": "npm run build:runtime && tsc --noEmit",
     "build:runtime": "esbuild server/playAgentMcp.ts --bundle --platform=node --format=esm --target=node20 --outfile=plugins/play-agent/plugin-runtime/play-agent-mcp.mjs",
+    "docs:site": "node --import tsx scripts/generateUseCaseFixtures.ts --output dist/pages",
     "evaluate": "node --import tsx scripts/summarizeEvaluation.ts",
     "test": "NODE_ENV=test node --import tsx --test server/*.test.ts src/*.test.ts"
   },

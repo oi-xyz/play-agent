@@ -1,6 +1,6 @@
 {
   "name": "play-agent",
-  "version": "0.1.5",
+  "version": "0.1.6+codex.20260720085714",
   "description": "Turn substantial agent work and independent reviews into inspectable reasoning maps inside Codex.",
   "author": {
     "name": "OI XYZ",

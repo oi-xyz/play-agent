@@ -36,6 +36,34 @@ present_work_map     = explicit semantic graph
 Play Agent MCP App   = visual inspection and follow-up surface
 ```
 
+## Use Cases
+
+Each example starts with one prompt. The screenshots are generated from representative inputs rendered by the production MCP App UI. Click a screenshot to inspect the interactive map on GitHub Pages; Codex actions and host display modes require the installed plugin.
+
+### Independent Review
+
+> Independently review Play Agent 0.1.5. Map the evidence, decisions, unresolved risks, open questions, and next validation work.
+
+[![Independent review Work Map](docs/assets/use-cases/independent-review-map.jpg)](https://oi-xyz.github.io/play-agent/use-cases/independent-review-map.html)
+
+[Open the interactive review map](https://oi-xyz.github.io/play-agent/use-cases/independent-review-map.html)
+
+### Delivery Dependencies
+
+> Turn the Portfolio API beta plan into a work map. Show the committed delivery cards, dependencies, blocking risks, evidence, and unresolved questions.
+
+[![Delivery dependency Work Map](docs/assets/use-cases/delivery-dependency-map.jpg)](https://oi-xyz.github.io/play-agent/use-cases/delivery-dependency-map.html)
+
+[Open the interactive delivery map](https://oi-xyz.github.io/play-agent/use-cases/delivery-dependency-map.html)
+
+### C4 Container Review
+
+> Review the Portfolio platform at C4 container level. Map the containers, dependencies, architectural decision, supporting evidence, risks, and open questions.
+
+[![C4 container architecture Work Map](docs/assets/use-cases/container-architecture-review.jpg)](https://oi-xyz.github.io/play-agent/use-cases/container-architecture-review.html)
+
+[Open the interactive architecture map](https://oi-xyz.github.io/play-agent/use-cases/container-architecture-review.html)
+
 ## Node Model
 
 The node taxonomy is intentionally compact:
@@ -213,6 +241,14 @@ npm run mcp
 ```
 
 The process waits for newline-delimited JSON-RPC. This command is for development only; installed users should use the plugin's bundled MCP configuration rather than adding a second standalone server.
+
+Generate the static GitHub Pages showcase locally with:
+
+```bash
+npm run docs:site
+```
+
+The output is written to `dist/pages`. It reuses the production MCP App renderer with representative, explicit map inputs; it does not emulate Codex actions or host display modes.
 
 ## Verify
 
