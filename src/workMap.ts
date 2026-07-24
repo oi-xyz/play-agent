@@ -127,6 +127,7 @@ export function createWorkMapSnapshot(input: PresentWorkMapInput): WorkMapSnapsh
     title: normalizeInlineText(input.title),
     authorRole: input.authorRole,
     ...(input.reviewOf ? {reviewOf: normalizeInlineText(input.reviewOf)} : {}),
+    entryNodeId: input.entryNodeId,
     ...graph,
   };
 }

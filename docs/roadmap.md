@@ -8,24 +8,26 @@ Play Agent is a stateless MCP tool plus MCP App for presenting reviewable reason
 - Compact node and relation taxonomy.
 - Explicit connected graph validation with no inferred edges.
 - Provenance through `authorRole`, `reviewOf`, and node origin.
-- Verifiable node references with URI or locator.
+- Verifiable node references with path, URI, or locator.
 - Qualitative confidence for inferential nodes, with explicit reasons when confidence is not high.
 - Deterministic snapshot ID and Dagre layout.
-- Work Map-only MCP App with search, multi-type contextual highlighting, pan, zoom, fit view, relationship highlighting, and view reset.
+- Work Map-only MCP App with search, multi-type contextual highlighting, pan, zoom, fit view, relationship highlighting, and an explicit `Go to start` action.
 - Host-first gesture handling so ordinary trackpad scrolling navigates the conversation while pinch gestures and explicit controls zoom the map.
-- Readable large-map entry view and a navigable minimap so fit-all is optional rather than the unreadable default.
-- Explicit separation between relationship selection and full detail viewing; opening details preserves the selected relationship context and global layout.
-- Map-local node focus overlay with full content, relationships, and references.
+- Explicit agent-authored reading entry, a readable large-map entry view, and a navigable minimap so fit-all is optional rather than the unreadable default.
+- Explicit separation between relationship selection and full detail viewing; responsive Peek preserves the selected relationship context and global layout.
+- Responsive node Peek with full content, navigable relationship paths, actionable references, keyboard navigation, and focus restoration.
+- Spatial spotlight states, compact type icons, node-to-Peek source continuity, and restrained one-shot edge feedback with reduced-motion support.
 - Host-native `Ask why`, `Challenge`, and `Continue` actions.
 - Reviewer-only `Accept`, `Reject`, and accepted-finding handoff actions.
 - No session manager, mirror store, latest-map pointer, compatibility schema, or local agent.
 - Installable Codex Plugin manifest with a self-contained MCP runtime.
+- Apache-2.0 licensing, a public privacy boundary, use-case screenshots, and a direct Codex workflow link.
 - `map-work` skill for selective, provenance-aware graph construction.
 - `independent-review` skill with a hard isolation gate and explicit handoff semantics.
 
 ## Distribution Milestone
 
-The free individual product is the Codex Plugin, not a standalone application. Validate local installation, skill triggering, MCP discovery, and inline rendering from a clean Codex task before submitting it to a broader marketplace.
+The free individual product is the Codex Plugin, not a standalone application. Validate the bundled server with `npm run verify:plugin`, reinstall the cachebuster version, restart Codex, then validate skill triggering, MCP discovery, and inline rendering through a real `present_work_map` call from a clean task before submitting it to a broader marketplace. A direct runtime or shell JSON-RPC call is a protocol check only and must never be reported as host rendering.
 
 Do not introduce accounts, billing, cloud persistence, or a subscription gate during this milestone. A future paid offering must be justified by repeated team-level value such as organization-specific review policy, evaluation packs, managed deployment, or audit requirements; it must not merely charge for the graph UI.
 
@@ -60,6 +62,6 @@ Play Agent should not automate task discovery or maintain hidden handoff state u
 ## Layout And Host Coverage
 
 - Test 5, 15, and 24-node maps with branching, multi-parent edges, and cycles.
-- Verify inline, host-native PiP, and fullscreen behavior in each target MCP Apps host, including context preservation, PiP-to-fullscreen return behavior, viewport fitting, and a second `present_work_map` call while PiP is active.
+- Verify inline and host-native fullscreen behavior in each target MCP Apps host, including context preservation, viewport fitting, and return-to-inline behavior.
 - Confirm follow-up and external-reference capabilities through feature detection.
 - Keep tools decoupled from rendering and keep unsupported host limitations explicit.

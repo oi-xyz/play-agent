@@ -24,6 +24,7 @@ const useCases: Array<{slug: string; prompt: string; description: string; input:
       title: 'Independent review of Play Agent 0.1.5',
       authorRole: 'reviewer',
       reviewOf: 'Play Agent v0.1.5 release',
+      entryNodeId: 'claim-ready',
       nodes: [
         {
           id: 'evidence-tests',
@@ -50,8 +51,8 @@ const useCases: Array<{slug: string; prompt: string; description: string; input:
         {
           id: 'decision-native',
           kind: 'decision',
-          title: 'Use only host-native display modes',
-          body: 'PiP and fullscreen remain capability-gated instead of being simulated.',
+          title: 'Use only host-native fullscreen',
+          body: 'Fullscreen remains capability-gated instead of being simulated.',
           origin: 'implementer',
         },
         {
@@ -61,16 +62,16 @@ const useCases: Array<{slug: string; prompt: string; description: string; input:
           body: 'A compliant MCP App may render differently across Codex host versions.',
         },
         {
-          id: 'question-pip',
+          id: 'question-fullscreen',
           kind: 'question',
-          title: 'Does PiP preserve context in every target host?',
+          title: 'Does fullscreen preserve context in every target host?',
           body: 'This requires host-level interaction testing beyond protocol tests.',
         },
         {
           id: 'work-validate',
           kind: 'kanban_card',
-          title: 'Validate PiP in the current Codex host',
-          body: 'Exercise inline, PiP, fullscreen, and return transitions as a tracked release check.',
+          title: 'Validate fullscreen in the current Codex host',
+          body: 'Exercise inline, fullscreen, and return transitions as a tracked release check.',
         },
         {
           id: 'lesson-review',
@@ -86,8 +87,8 @@ const useCases: Array<{slug: string; prompt: string; description: string; input:
         {from: 'evidence-boundary', to: 'claim-ready', relation: 'supports'},
         {from: 'decision-native', to: 'claim-ready', relation: 'informs'},
         {from: 'risk-host', to: 'claim-ready', relation: 'contradicts'},
-        {from: 'question-pip', to: 'risk-host', relation: 'informs'},
-        {from: 'work-validate', to: 'question-pip', relation: 'resolves'},
+        {from: 'question-fullscreen', to: 'risk-host', relation: 'informs'},
+        {from: 'work-validate', to: 'question-fullscreen', relation: 'resolves'},
         {from: 'claim-ready', to: 'lesson-review', relation: 'leads_to'},
       ],
     },
@@ -100,6 +101,7 @@ const useCases: Array<{slug: string; prompt: string; description: string; input:
     input: {
       title: 'Portfolio API beta delivery plan',
       authorRole: 'agent',
+      entryNodeId: 'decision-scope',
       nodes: [
         {
           id: 'decision-scope',
@@ -179,6 +181,7 @@ const useCases: Array<{slug: string; prompt: string; description: string; input:
     input: {
       title: 'Portfolio platform container-level architecture review',
       authorRole: 'agent',
+      entryNodeId: 'decision-separate',
       nodes: [
         {
           id: 'container-web',

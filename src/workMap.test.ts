@@ -8,6 +8,7 @@ const input: PresentWorkMapInput = {
   title: 'Review MCP product direction',
   authorRole: 'reviewer',
   reviewOf: 'implementation-checkpoint-7',
+  entryNodeId: 'decision-mcp-first',
   nodes: [
     {
       id: 'evidence-host-ui',
@@ -82,6 +83,7 @@ test('createWorkMapSnapshot preserves semantics, provenance, and references', ()
 
   assert.equal(snapshot.authorRole, 'reviewer');
   assert.equal(snapshot.reviewOf, 'implementation-checkpoint-7');
+  assert.equal(snapshot.entryNodeId, 'decision-mcp-first');
   assert.deepEqual(snapshot.nodes.map((node) => node.id), [
     'evidence-host-ui',
     'decision-mcp-first',
@@ -104,6 +106,7 @@ test('createWorkMapSnapshot preserves qualitative confidence and uncertainty rea
   const snapshot = createWorkMapSnapshot({
     title: 'Confidence checkpoint',
     authorRole: 'agent',
+    entryNodeId: 'claim-demand',
     nodes: [
       {
         id: 'claim-demand',
@@ -153,6 +156,16 @@ test('the same semantic graph produces the same snapshot ID and layout', () => {
 
   assert.equal(first.id, second.id);
   assert.deepEqual(first, second);
+});
+
+test('the explicit reading entry contributes to snapshot identity', () => {
+  const first = createWorkMapSnapshot(input);
+  const second = createWorkMapSnapshot({...input, entryNodeId: 'evidence-host-ui'});
+
+  assert.notEqual(first.id, second.id);
+  assert.equal(second.entryNodeId, 'evidence-host-ui');
+  assert.deepEqual(second.nodes, first.nodes);
+  assert.deepEqual(second.edges, first.edges);
 });
 
 test('taxonomy remains compact and excludes ambiguous aliases', () => {
@@ -232,7 +245,13 @@ test('Dagre lays out a 24-node cyclic graph without node overlap', () => {
   edges.push({from: nodes[23].id, to: nodes[0].id, relation: 'informs'});
   edges.push({from: nodes[0].id, to: nodes[12].id, relation: 'supports'});
 
-  const snapshot = createWorkMapSnapshot({title: 'Dense graph', authorRole: 'agent', nodes, edges});
+  const snapshot = createWorkMapSnapshot({
+    title: 'Dense graph',
+    authorRole: 'agent',
+    entryNodeId: 'node-1',
+    nodes,
+    edges,
+  });
   assert.equal(snapshot.nodes.length, 24);
   assert.equal(snapshot.edges.length, 25);
 

@@ -27,13 +27,22 @@ Do not import the implementer's conclusions as established facts. The implementa
    - a risk blocks an implementer decision;
    - an unresolved question depends on missing evidence;
    - an accepted correction leads to an action.
-6. Set map-level `authorRole` to `reviewer`, set `reviewOf` precisely, and preserve implementer or user origin on quoted positions.
-7. Add qualitative confidence and its basis to reviewer `claim`, `assumption`, and `lesson` nodes. Medium and low confidence require concrete uncertainty reasons. Confidence does not replace evidence or reviewer isolation.
-8. Reference workspace code with `{"path":"src/file.ts","line":42}`. Use `uri` for links and `locator` only for precise non-file locations; each reference uses exactly one location form.
+6. Set `entryNodeId` to the highest-severity material finding. If there are no findings, use the review conclusion or the most consequential unresolved question; never let node order implicitly choose the reading entry.
+7. Set map-level `authorRole` to `reviewer`, set `reviewOf` precisely, and preserve implementer or user origin on quoted positions.
+8. Add qualitative confidence and its basis to reviewer `claim`, `assumption`, and `lesson` nodes. Medium and low confidence require concrete uncertainty reasons. Confidence does not replace evidence or reviewer isolation.
+9. Reference workspace code with `{"path":"src/file.ts","line":42}`. Use `uri` for links and `locator` only for precise non-file locations; each reference uses exactly one location form.
 
-Before calling the tool, perform a connectivity preflight by treating every directed edge as undirected and checking that all nodes are reachable. Multiple independent findings usually converge on a truthful review result such as "this checkpoint does not pass" and then lead to separate corrective actions. If they share no real outcome, omit unrelated nodes or use separate maps; do not wait for schema rejection and then invent a connecting edge.
+Before calling the tool, perform a connectivity preflight by treating every directed edge as undirected and checking that all nodes are reachable from `entryNodeId`. Multiple independent findings usually converge on a truthful review result such as "this checkpoint does not pass" and then lead to separate corrective actions. If they share no real outcome, omit unrelated nodes or use separate maps; do not wait for schema rejection and then invent a connecting edge.
 
 If there are no material findings and no useful relational structure, state that clearly without forcing a map.
+
+## Tool Delivery Contract
+
+- Present the review map only by calling the connected `present_work_map` MCP tool.
+- Do not invoke the bundled MCP runtime through a shell, a temporary JSON-RPC file, or a direct process call. Those paths can test protocol output but cannot attach the MCP App to the active conversation.
+- State that the map was presented only after the tool call succeeds. If the tool is unavailable or the call fails, report that limitation plainly and do not claim that the user can see a rendered map.
+- When the plugin was just installed or updated and the tool is unavailable, tell the user to restart Codex and start a new task so the host reloads the versioned plugin path. Do not inspect, patch, copy, or preserve plugin-cache directories as a workaround.
+- Do not substitute Mermaid, prose, or a manually opened static fixture for the requested Play Agent map unless the user explicitly asks for a different format.
 
 ## Decisions And Handoff
 

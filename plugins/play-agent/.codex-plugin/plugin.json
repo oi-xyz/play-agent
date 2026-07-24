@@ -1,6 +1,6 @@
 {
   "name": "play-agent",
-  "version": "0.1.6+codex.20260720085714",
+  "version": "0.1.6",
   "description": "Turn substantial agent work and independent reviews into inspectable reasoning maps inside Codex.",
   "author": {
     "name": "OI XYZ",
@@ -8,6 +8,7 @@
   },
   "homepage": "https://github.com/oi-xyz/play-agent#readme",
   "repository": "https://github.com/oi-xyz/play-agent",
+  "license": "Apache-2.0",
   "keywords": [
     "codex",
     "review",
@@ -26,6 +27,7 @@
       "Interactive"
     ],
     "websiteURL": "https://github.com/oi-xyz/play-agent",
+    "privacyPolicyURL": "https://github.com/oi-xyz/play-agent/blob/main/PRIVACY.md",
     "defaultPrompt": [
       "Map this result so I can inspect the reasoning.",
       "Independently review this implementation checkpoint.",
@@ -33,7 +35,12 @@
     ],
     "brandColor": "#C43CFF",
     "composerIcon": "./assets/logo.svg",
-    "logo": "./assets/logo.svg"
+    "logo": "./assets/logo.svg",
+    "screenshots": [
+      "./assets/independent-review-map.png",
+      "./assets/delivery-dependency-map.png",
+      "./assets/container-architecture-review.png"
+    ]
   },
   "mcpServers": "./.mcp.json"
 }

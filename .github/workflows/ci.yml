@@ -21,4 +21,5 @@ jobs:
       - run: npm run build
       - name: Verify bundled plugin runtime is current
         run: git diff --exit-code -- plugins/play-agent/plugin-runtime/play-agent-mcp.mjs
+      - run: npm run verify:plugin
       - run: npm test

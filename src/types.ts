@@ -136,6 +136,7 @@ export type WorkMapSnapshot = {
   title: string;
   authorRole: WorkMapAuthorRole;
   reviewOf?: string;
+  entryNodeId: string;
   nodes: WorkMapNode[];
   edges: WorkMapEdge[];
   layout: {
@@ -148,6 +149,7 @@ export type PresentWorkMapInput = {
   title: string;
   authorRole: WorkMapAuthorRole;
   reviewOf?: string;
+  entryNodeId: string;
   nodes: WorkMapNodeInput[];
   edges: WorkMapEdgeInput[];
 };

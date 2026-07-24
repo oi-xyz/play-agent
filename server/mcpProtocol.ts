@@ -101,6 +101,7 @@ export const presentWorkMapInputSchema = z
     title: z.string().min(1),
     authorRole: z.enum(workMapAuthorRoles),
     reviewOf: z.string().min(1).optional(),
+    entryNodeId: nodeIdSchema,
     nodes: z.array(workMapNodeSchema).min(1).max(24),
     edges: z.array(workMapEdgeSchema).max(48),
   })
@@ -113,6 +114,14 @@ export const presentWorkMapInputSchema = z
       }
       nodeIds.add(node.id);
     });
+
+    if (!nodeIds.has(input.entryNodeId)) {
+      context.addIssue({
+        code: 'custom',
+        message: `Unknown entry node: ${input.entryNodeId}`,
+        path: ['entryNodeId'],
+      });
+    }
 
     const edgeKeys = new Set<string>();
     const adjacency = new Map(input.nodes.map((node) => [node.id, new Set<string>()]));
@@ -183,7 +192,7 @@ const referenceJsonSchema = {
 const toolInputSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['title', 'authorRole', 'nodes', 'edges'],
+  required: ['title', 'authorRole', 'entryNodeId', 'nodes', 'edges'],
   properties: {
     title: {type: 'string', description: 'Short title for this reviewable work map.'},
     authorRole: {
@@ -194,6 +203,13 @@ const toolInputSchema = {
     reviewOf: {
       type: 'string',
       description: 'Optional checkpoint, task, answer, or artifact identifier that this reviewer map evaluates.',
+    },
+    entryNodeId: {
+      type: 'string',
+      pattern: '^[A-Za-z0-9][A-Za-z0-9_-]*$',
+      maxLength: 64,
+      description:
+        'ID of the node users should inspect first. It must reference an existing node and is explicitly authored; Play Agent never infers it.',
     },
     nodes: {
       type: 'array',
@@ -291,12 +307,13 @@ const workMapOutputSchema = {
     snapshot: {
       type: 'object',
       additionalProperties: false,
-      required: ['id', 'title', 'authorRole', 'nodes', 'edges', 'layout'],
+      required: ['id', 'title', 'authorRole', 'entryNodeId', 'nodes', 'edges', 'layout'],
       properties: {
         id: {type: 'string'},
         title: {type: 'string'},
         authorRole: {type: 'string', enum: workMapAuthorRoles},
         reviewOf: {type: 'string'},
+        entryNodeId: {type: 'string'},
         nodes: {
           type: 'array',
           items: {
@@ -371,7 +388,7 @@ export function listToolsResult() {
         name: 'present_work_map',
         title: 'Present Work Map',
         description:
-          'Present a compact, connected semantic graph for a substantial answer or independent review. Supply explicit nodes, provenance, references, and directed relationships; Play Agent validates and renders the graph without storing or inferring state.',
+          'Present a compact, connected semantic graph for a substantial answer or independent review. Supply an explicit reading entry, nodes, provenance, references, and directed relationships; Play Agent validates and renders the graph without storing or inferring state.',
         inputSchema: toolInputSchema,
         outputSchema: workMapOutputSchema,
         annotations: {

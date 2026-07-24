@@ -20,10 +20,11 @@ The agent calls `present_work_map` with:
 
 - `title`;
 - `authorRole` and optional `reviewOf`;
+- an explicit `entryNodeId` for the intended reading start;
 - explicit semantic `nodes` with optional provenance overrides and references;
 - explicit directed `edges`.
 
-Play Agent validates connectivity and references, computes deterministic Dagre layout, and returns the MCP App resource `ui://play-agent/work-map.html`. It does not persist, infer, repair, or scrape state.
+Play Agent validates the reading entry, connectivity, and references, computes deterministic Dagre layout, and returns the MCP App resource `ui://play-agent/work-map.html`. It does not persist, infer, repair, or scrape state.
 
 ## Design Boundary
 

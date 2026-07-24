@@ -26,13 +26,13 @@ Qualitative confidence is limited to `claim`, `assumption`, and `lesson`, where 
 
 ## Work Map Only
 
-The MCP App contains the map, map controls, and a temporary node detail overlay. A single node click highlights its direct relationship neighborhood without hiding nodes, changing layout, or moving the viewport. `View details` opens complete content without replacing the current relationship selection. Nodes are not manually draggable, and reset clears the selection and restores the deterministic global view. The App does not contain a Selected Node sidebar, database inspector, form editor, or parallel chat UI.
+The MCP App contains the map, map controls, and a temporary responsive node Peek. A single node click highlights its direct relationship neighborhood without hiding nodes, changing layout, or moving the viewport. `Peek` opens complete content without replacing the current relationship selection: it appears beside the map on wider viewports and as a bottom sheet on narrow viewports. Relationship rows navigate within Peek with Back and Forward history, while references expose only host-supported source actions. Nodes and relationships are keyboard reachable, Escape restores focus, and `Go to start` returns to the explicit agent-authored entry node. Nodes are not manually draggable. The App does not contain a Selected Node sidebar, database inspector, form editor, or parallel chat UI.
+
+Selection uses a stable spatial spotlight: the selected node and its direct relationship context remain legible while unrelated nodes recede without being removed. Every kind has a compact type icon that supplements, but never replaces, its text label and color. Pointer, focus, edge-direction, and node-to-Peek transitions are short, non-continuous, and disabled when the host requests reduced motion. Node cards never tilt or distort because text and edge geometry remain primary review surfaces.
 
 Because the map is embedded in a conversation, ordinary wheel and trackpad scrolling belongs to the host conversation. The map zooms only from an explicit pinch gesture or its zoom buttons; drag-to-pan remains an intentional pointer action. This avoids an invisible activation mode and prevents the inline App from trapping routine conversation navigation.
 
-The map requests the host's native picture-in-picture and fullscreen display modes when that capability is available. PiP keeps the active map visible while the conversation continues, uses a compact toolbar, and provides an explicit path into fullscreen. Fullscreen returns to the mode it was opened from. Both transitions keep the same map instance, selected node, filters, and detail state while fitting the graph to the new viewport. Unsupported hosts do not show these actions; Play Agent does not simulate display modes with CSS overlays, external pages, or substitute windows.
-
-PiP preserves the active mounted map; it does not claim to restore historical widgets after the host unmounts them. Play Agent remains stateless and does not add map IDs, latest-map pointers, or hidden persistence for this presentation feature.
+The map requests the host's native fullscreen display mode when that capability is available. Fullscreen keeps the same map instance, selected node, filters, and detail state while fitting the graph to the expanded viewport. Unsupported hosts do not show this action; Play Agent does not simulate fullscreen with CSS overlays, external pages, or substitute windows.
 
 ## Host-Native Follow-Up
 

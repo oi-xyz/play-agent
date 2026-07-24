@@ -1,5 +1,9 @@
 # Play Agent
 
+[![CI](https://github.com/oi-xyz/play-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/oi-xyz/play-agent/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/oi-xyz/play-agent)](https://github.com/oi-xyz/play-agent/releases)
+
 Play Agent is a Codex Plugin that turns substantial agent work into a reviewable, two-dimensional reasoning map. It bundles two focused workflow skills with a stateless MCP tool and MCP App.
 
 [Source](https://github.com/oi-xyz/play-agent) | [Issues](https://github.com/oi-xyz/play-agent/issues)
@@ -29,6 +33,8 @@ Long agent outputs bury their useful structure in prose. Users need to see:
 - whether a node came from the user, an implementer, or an independent reviewer.
 
 The map is a navigation and review artifact, not proof that the agent's reasoning is correct. References and provenance make important nodes inspectable; an independent reviewer remains distinct from implementer self-assessment.
+
+Every map declares one explicit reading entry. The App uses it to orient the readable viewport for a large graph and exposes it through `Go to start` without adding a persistent badge to the node. Play Agent does not infer importance from graph centrality or array order, and the entry does not hide the rest of the map.
 
 ```text
 Agent work           = prose and execution in the host
@@ -84,7 +90,7 @@ The node taxonomy is intentionally compact:
 
 The two specialized kinds are deliberately narrow. `action` remains an inferred or recommended next step; use `kanban_card` only when that work is explicitly being tracked. `c4_container` means a C4 application or data store such as a service, web app, database, or queue, not an arbitrary module or function. These kinds do not imply a complete Kanban board or C4 modeling system, and they remain flat peers in the type filter.
 
-The App explains these meanings where they are needed: the type filter includes a concise definition for every type present in the map, node type badges expose the same definition on hover or keyboard focus, and node details keep it visible for touch users. All three surfaces use the shared registry in `src/types.ts`.
+The App explains these meanings where they are needed: the type filter includes a concise definition for every type present in the map, node type badges combine a stable icon with the type color and expose the same definition on hover or keyboard focus, and node details keep it visible for touch users. Evidence, decisions, risks, Kanban cards, and C4 containers also use restrained framing that reflects their semantics without changing the shared card geometry. These visual treatments do not introduce taxonomy levels or type-specific data fields.
 
 ### Confidence
 
@@ -114,7 +120,7 @@ References are attached to nodes and use exactly one inspectable location: `path
 1. The user asks Codex to perform substantial work.
 2. Codex calls `present_work_map` when relationships, evidence, alternatives, or follow-up work materially benefit from a map.
 3. The MCP host renders `ui://play-agent/work-map.html` inline.
-4. The user searches, filters, pans, zooms, opens a node to inspect its complete content, pins the active Work Map in the host's picture-in-picture surface, or expands it fullscreen when available.
+4. The user searches, filters, pans, zooms, opens a node to inspect its complete content, or expands the Work Map fullscreen when available.
 5. In hosts that support the Apps SDK bridge, the user can choose `Ask why`, `Challenge`, or `Continue`; reviewer nodes additionally support `Accept`, `Reject`, and `Accept & handoff`. The MCP App sends the explicit user decision to the host conversation.
 
 The tool should not be called for simple answers where a map adds no inspection value.
@@ -126,6 +132,7 @@ The tool should not be called for simple answers where a map adds no inspection 
 - `title`
 - `authorRole`
 - optional `reviewOf` for an independent reviewer map
+- `entryNodeId`, identifying the existing node users should inspect first
 - `nodes[]`, limited to 24
 - `edges[]`, limited to 48
 
@@ -136,6 +143,7 @@ For a multi-node map, all nodes must belong to one connected graph. The server r
   "title": "Review the MCP product boundary",
   "authorRole": "reviewer",
   "reviewOf": "implementation-checkpoint-7",
+  "entryNodeId": "decision-mcp-first",
   "nodes": [
     {
       "id": "evidence-host-ui",
@@ -184,15 +192,21 @@ The App contains only the Work Map surface. It provides:
 - smooth, directed, labeled edges and deterministic Dagre layout;
 - search, multi-type highlighting with relationship context, fit view, explicit zoom controls, pinch-to-zoom, and drag-to-pan;
 - host-first scrolling: ordinary wheel and trackpad scrolling stays with the Codex conversation instead of zooming the inline map;
-- host-native display modes: capability-gated toolbar actions pin the active map in picture-in-picture or expand it fullscreen, preserve map context, and fit the graph to each viewport;
+- host-native fullscreen: a capability-gated toolbar action expands the active map, preserves map context, and fits the graph to the expanded viewport;
 - single-click relationship highlighting that preserves the full map and its deterministic global layout;
-- an explicit `View details` action that does not replace the current relationship selection;
-- view reset; nodes are not manually draggable;
+- a stable spatial spotlight that lifts the selected node, preserves related context, and quietly recedes unrelated work;
+- compact type icons for every node type, with restrained pointer and focus feedback that does not distort text or graph geometry;
+- a responsive node Peek: a side panel beside the map on wider viewports and a bottom sheet on narrow viewports, without replacing the current relationship selection;
+- node-to-Peek continuity through a persistent source halo, shared type label, and responsive transition;
+- relationship selection with a stronger edge treatment and related-node context, without adding a separate visual prompt;
+- one-shot directional edge feedback for node preview and selection, disabled when reduced motion is requested;
+- `Go to start` returns to the agent-declared reading entry; nodes are not manually draggable;
 - provenance visible on every node;
-- a map-local focus overlay with complete node content, relationships, and references;
+- complete node content, navigable relationships, and actionable references inside Peek;
+- keyboard navigation with visible focus, directional node movement, relationship focus, Escape handling, and focus restoration;
 - qualitative confidence on claims, assumptions, and lessons, including visible reasons when confidence is not high;
 - a readable default viewport for large maps plus a navigable minimap and an explicit fit-all overview;
-- host-native `Ask why`, `Challenge`, and `Continue` actions when `sendFollowUpMessage` is available;
+- host-native source inspection, `Ask why`, `Challenge`, and `Continue` actions when `sendFollowUpMessage` is available;
 - reviewer-only `Accept`, `Reject`, and `Accept & handoff` actions. The handoff prompt contains only the accepted finding and its references.
 
 There is no Selected Node sidebar, form editor, Kanban database, or local chat implementation.
@@ -211,7 +225,15 @@ codex plugin marketplace add oi-xyz/play-agent --ref main
 codex plugin add play-agent@oi-xyz
 ```
 
-Start a new Codex task after installation so its skills and bundled MCP server are discovered. Ask Codex to map substantial work directly, or invoke one of the plugin skills with `@`.
+Restart Codex after installation, then start a new task so the app reloads the plugin's versioned skills and bundled MCP server. Ask Codex to map substantial work directly, or invoke one of the plugin skills with `@`.
+
+[Open Play Agent in Codex](codex://new?prompt=Use%20%5B%40play-agent%5D(plugin%3A%2F%2Fplay-agent%40oi-xyz)%20to%20map%20this%20work%20so%20I%20can%20inspect%20its%20evidence%2C%20decisions%2C%20risks%2C%20and%20next%20actions.)
+
+The deep link starts a new task with the Play Agent plugin mentioned. Install the plugin first, then add the work or artifact you want mapped.
+
+Play Agent requires Node.js 20 or newer because its bundled local MCP server runs on Node. The plugin uses its own launcher, so Codex Desktop does not need a version-manager-specific Node directory in its inherited `PATH`. The launcher accepts `PLAY_AGENT_NODE` as an explicit override and otherwise resolves supported PATH, fnm, nvm, Volta, asdf, mise, and Homebrew installations. It exits with a clear error when no supported runtime exists.
+
+The plugin must present maps through the connected `present_work_map` tool. Running `npm run mcp`, launching the bundled runtime directly, or sending JSON-RPC from a shell is useful only for development checks and cannot attach the MCP App to a Codex conversation.
 
 ## Update
 
@@ -222,7 +244,7 @@ codex plugin marketplace upgrade oi-xyz
 codex plugin add play-agent@oi-xyz
 ```
 
-Start a new Codex task after updating so the task loads the new skills, MCP server, and App resource.
+Restart Codex after updating, then start a new task so the app replaces any cached versioned paths and loads the new skills, MCP server, and App resource. Do not copy, patch, or preserve an old directory under the Codex plugin cache.
 
 ## Development
 
@@ -255,10 +277,21 @@ The output is written to `dist/pages`. It reuses the production MCP App renderer
 ```bash
 npm run build
 npm run test
+npm run verify:plugin
 python3 /path/to/skill-creator/scripts/quick_validate.py plugins/play-agent/skills/map-work
 python3 /path/to/skill-creator/scripts/quick_validate.py plugins/play-agent/skills/independent-review
 python3 /path/to/plugin-creator/scripts/validate_plugin.py plugins/play-agent
 ```
+
+`npm run verify:plugin` launches the server using the checked-in plugin `.mcp.json`, discovers `present_work_map`, reads the MCP App resource, and performs a real tool call against the bundled runtime. After installing or updating the plugin, restart Codex and use a new task for the final host-level check. A shell smoke test validates the package and protocol but is never evidence that an MCP App rendered in a conversation.
+
+To check the exact directory produced by a local install, pass its plugin root:
+
+```bash
+npm run verify:plugin -- /path/to/installed/play-agent
+```
+
+Set `PLAY_AGENT_SMOKE_PATH=/usr/bin:/bin` when running the script directly to emulate a GUI process whose inherited `PATH` does not contain Node.
 
 For paired product validation against structured prose, follow `docs/evaluation.md` and summarize local observations with:
 
@@ -274,3 +307,9 @@ npm run evaluate -- /path/to/trials.jsonl
 - No inferred graph or compatibility schema.
 - No generic whiteboard or manual node editor.
 - No account, billing, subscription gate, or cloud control plane before product validation establishes repeated value.
+
+## Privacy And License
+
+Play Agent is local and stateless: it receives only the explicit `present_work_map` payload supplied by the host, does not persist it, and does not add telemetry or a Play Agent cloud service. Codex and any model providers still process conversation data under their own terms. See [PRIVACY.md](PRIVACY.md) for the complete boundary.
+
+Play Agent is licensed under [Apache-2.0](LICENSE).

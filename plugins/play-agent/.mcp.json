@@ -1,10 +1,8 @@
 {
   "mcpServers": {
     "play-agent": {
-      "command": "node",
-      "args": [
-        "./plugin-runtime/play-agent-mcp.mjs"
-      ],
+      "command": "./bin/play-agent-mcp",
+      "args": [],
       "cwd": "."
     }
   }

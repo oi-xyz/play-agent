@@ -2,6 +2,7 @@
   "name": "play-agent",
   "version": "0.1.6",
   "private": true,
+  "license": "Apache-2.0",
   "description": "A Codex Plugin for inspectable reasoning maps and independent review workflows.",
   "homepage": "https://github.com/oi-xyz/play-agent#readme",
   "repository": {
@@ -21,7 +22,8 @@
     "build:runtime": "esbuild server/playAgentMcp.ts --bundle --platform=node --format=esm --target=node20 --outfile=plugins/play-agent/plugin-runtime/play-agent-mcp.mjs",
     "docs:site": "node --import tsx scripts/generateUseCaseFixtures.ts --output dist/pages",
     "evaluate": "node --import tsx scripts/summarizeEvaluation.ts",
-    "test": "NODE_ENV=test node --import tsx --test server/*.test.ts src/*.test.ts"
+    "test": "NODE_ENV=test node --import tsx --test server/*.test.ts src/*.test.ts",
+    "verify:plugin": "node scripts/smokePluginRuntime.mjs"
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",

@@ -16276,6 +16276,7 @@ function createWorkMapSnapshot(input) {
     title: normalizeInlineText(input.title),
     authorRole: input.authorRole,
     ...input.reviewOf ? { reviewOf: normalizeInlineText(input.reviewOf) } : {},
+    entryNodeId: input.entryNodeId,
     ...graph
   };
 }
@@ -16351,10 +16352,24 @@ var workMapConfidenceLevels = ["high", "medium", "low"];
 var confidenceNodeKinds = ["claim", "assumption", "lesson"];
 
 // server/mcpAppHtml.ts
+var workMapNodeKindIcons = {
+  claim: '<path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M7 8h10M7 12h7"/>',
+  evidence: '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/>',
+  option: '<circle cx="6" cy="4" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="20" r="2"/><path d="M6 6v12M8 5h6a4 4 0 0 1 4 4v7"/>',
+  decision: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+  assumption: '<path d="M10 2v7.3L4.25 19A2 2 0 0 0 6 22h12a2 2 0 0 0 1.75-3L14 9.3V2"/><path d="M8.5 2h7M6.5 17h11"/>',
+  risk: '<path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>',
+  question: '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 1 1 5.83 1c0 2-3 2-3 4M12 18h.01"/>',
+  action: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  kanban_card: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18M15 3v18"/>',
+  c4_container: '<path d="m21 8-9 5-9-5"/><path d="m3 8 9-5 9 5v8l-9 5-9-5Z"/><path d="M12 13v8"/>',
+  lesson: '<path d="M6 3a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v19l-6-4-6 4Z"/>'
+};
 var WORK_MAP_APP_RESOURCE_URI = "ui://play-agent/work-map.html";
 var WORK_MAP_APP_MIME_TYPE = "text/html;profile=mcp-app";
 function workMapAppHtml() {
   const nodeKindDescriptions = JSON.stringify(workMapNodeKindDescriptions).replace(/</g, "\\u003c");
+  const nodeKindIcons = JSON.stringify(workMapNodeKindIcons).replace(/</g, "\\u003c");
   const nodeKindCssVariables = (mode) => Object.entries(workMapNodeKindColors[mode]).map(([kind, color]) => `--${kind.replaceAll("_", "-")}: ${color};`).join("\n      ");
   return `<!doctype html>
 <html lang="en">
@@ -16440,41 +16455,15 @@ function workMapAppHtml() {
       background: var(--background);
     }
 
-    html[data-display-mode="pip"],
-    html[data-display-mode="pip"] body,
     html[data-display-mode="fullscreen"],
     html[data-display-mode="fullscreen"] body {
       height: 100%;
       min-height: 0;
     }
 
-    html[data-display-mode="pip"] .work-map,
     html[data-display-mode="fullscreen"] .work-map {
       height: 100vh;
       min-height: 0;
-    }
-
-    html[data-display-mode="pip"] .toolbar {
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: .5rem;
-      padding: .5rem .625rem;
-    }
-
-    html[data-display-mode="pip"] .filters,
-    html[data-display-mode="pip"] #map-role,
-    html[data-display-mode="pip"] #map-meta,
-    html[data-display-mode="pip"] #reset-view,
-    html[data-display-mode="pip"] #fit-view,
-    html[data-display-mode="pip"] .minimap {
-      display: none;
-    }
-
-    html[data-display-mode="pip"] .title-block h1 {
-      font-size: .875rem;
-    }
-
-    html[data-display-mode="pip"] .toolbar-actions {
-      grid-column: 2;
     }
 
     .toolbar {
@@ -16546,6 +16535,17 @@ function workMapAppHtml() {
       border-radius: 50%;
       background: var(--origin-color, var(--agent));
       content: '';
+    }
+
+    .kind-icon {
+      flex: 0 0 auto;
+      width: .75rem;
+      height: .75rem;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 1.8;
     }
 
     .filters {
@@ -16691,12 +16691,18 @@ function workMapAppHtml() {
 
     .type-filter-option input:checked::after { opacity: 1; }
 
-    .type-filter-option i {
-      width: .5rem;
-      height: .5rem;
-      border-radius: 50%;
-      background: var(--kind-color);
+    .type-filter-icon {
+      display: grid;
+      width: 1rem;
+      height: 1rem;
+      place-items: center;
+      color: var(--kind-color);
       transform: translateY(.3125rem);
+    }
+
+    .type-filter-icon .kind-icon {
+      width: .875rem;
+      height: .875rem;
     }
 
     .type-filter-label { font-weight: 600; }
@@ -16814,6 +16820,21 @@ function workMapAppHtml() {
       stroke-width: 2;
     }
 
+    .map-surface {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background: var(--background);
+      transition: grid-template-columns .24s ease;
+    }
+
+    .map-surface.has-peek {
+      grid-template-columns: minmax(18rem, 1fr) minmax(22rem, 28rem);
+    }
+
     .canvas {
       position: relative;
       min-width: 0;
@@ -16846,17 +16867,29 @@ function workMapAppHtml() {
       overflow: visible;
     }
 
+    .edges { z-index: 0; pointer-events: auto; }
+    .nodes { z-index: 1; pointer-events: none; }
+
     .edge-path {
       fill: none;
       stroke: var(--edge);
-      stroke-width: 1.5;
+      stroke-width: 1.25;
       marker-end: url(#arrow);
-      transition: opacity .15s ease, stroke .15s ease, stroke-width .15s ease;
+      transition: opacity .18s ease, stroke .18s ease, stroke-width .18s ease;
+    }
+
+    .edge-hit {
+      fill: none;
+      stroke: transparent;
+      stroke-width: 18;
+      cursor: pointer;
+      pointer-events: stroke;
     }
 
     .edge-label-bg {
       fill: color-mix(in srgb, var(--surface) 92%, transparent);
-      stroke: none;
+      stroke: var(--border);
+      stroke-width: .75;
     }
 
     .edge-label {
@@ -16864,6 +16897,10 @@ function workMapAppHtml() {
       font-size: 11px;
       font-weight: 600;
       text-anchor: middle;
+    }
+
+    .edge-group {
+      transition: opacity .18s ease;
     }
 
     .edge-group.is-muted { opacity: .12; }
@@ -16874,7 +16911,58 @@ function workMapAppHtml() {
 
     .edge-group.is-related .edge-path {
       stroke: var(--accent);
-      stroke-width: 2.25;
+      stroke-width: 2;
+      marker-end: url(#arrow-accent);
+      animation: edge-flow .58s ease-out 1;
+    }
+
+    .edge-group.is-selected .edge-path {
+      stroke: var(--accent);
+      stroke-width: 2.5;
+      marker-end: url(#arrow-accent);
+      animation: edge-select .38s ease-out 1;
+    }
+
+    .edge-group:focus-visible {
+      outline: none;
+    }
+
+    .edge-group:focus-visible .edge-path {
+      stroke: var(--accent);
+      stroke-width: 2.5;
+      marker-end: url(#arrow-accent);
+    }
+
+    .edge-group.is-preview:not(.is-related):not(.is-selected) .edge-path,
+    .edge-group:hover:not(.is-muted) .edge-path {
+      stroke: color-mix(in srgb, var(--accent) 78%, var(--edge));
+      stroke-width: 1.75;
+      marker-end: url(#arrow-accent);
+      animation: edge-flow .58s ease-out 1;
+    }
+
+    .edge-group.is-preview:not(.is-related):not(.is-selected) .edge-label,
+    .edge-group:hover:not(.is-muted) .edge-label {
+      fill: var(--text);
+    }
+
+    .edge-group.is-preview:not(.is-related):not(.is-selected) .edge-label-bg,
+    .edge-group:hover:not(.is-muted) .edge-label-bg {
+      fill: var(--surface);
+      stroke: color-mix(in srgb, var(--accent) 58%, var(--border));
+    }
+
+    .edge-group.is-related .edge-label,
+    .edge-group.is-selected .edge-label {
+      fill: var(--text);
+      font-weight: 650;
+    }
+
+    .edge-group.is-related .edge-label-bg,
+    .edge-group.is-selected .edge-label-bg,
+    .edge-group:focus-visible .edge-label-bg {
+      fill: var(--surface);
+      stroke: var(--accent);
     }
 
     .node {
@@ -16893,23 +16981,30 @@ function workMapAppHtml() {
       color: var(--text);
       text-align: left;
       cursor: pointer;
-      transition: border-color .15s ease, box-shadow .15s ease, opacity .15s ease, transform .15s ease;
+      pointer-events: auto;
+      transform-origin: center;
+      transition: border-color .18s ease, background .18s ease, box-shadow .18s ease, filter .18s ease, opacity .18s ease, transform .18s ease;
     }
 
-    .node:hover {
+    .node:hover,
+    .node:focus-visible {
+      z-index: 3;
       border-color: var(--border-strong);
       box-shadow: var(--shadow-med);
-      transform: translateY(-1px);
     }
 
     .node.is-selected {
+      z-index: 5;
       border-color: var(--border-strong);
       border-left-color: var(--kind-color);
-      box-shadow: 0 0 0 2px var(--accent), var(--shadow-med);
+      background: color-mix(in srgb, var(--kind-color) 3%, var(--surface));
+      box-shadow: 0 0 0 2px var(--accent), 0 16px 36px color-mix(in srgb, var(--kind-color) 18%, transparent), var(--shadow-med);
       opacity: 1;
+      transform: translateY(-3px) scale(1.024);
     }
 
     .node.is-related {
+      z-index: 2;
       border-color: color-mix(in srgb, var(--accent) 44%, var(--border));
       background: color-mix(in srgb, var(--accent) 3%, var(--surface));
       box-shadow: var(--shadow-med);
@@ -16917,13 +17012,40 @@ function workMapAppHtml() {
     }
 
     .node.is-muted {
-      opacity: .32;
-      filter: saturate(.58);
+      opacity: .18;
+      filter: saturate(.35);
     }
 
     .node.is-muted:hover {
-      opacity: .72;
-      filter: saturate(.86);
+      opacity: .66;
+      filter: saturate(.8);
+    }
+
+    .node.is-peek-source {
+      z-index: 6;
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--kind-color) 5%, var(--surface));
+      box-shadow:
+        0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent),
+        0 18px 42px color-mix(in srgb, var(--kind-color) 22%, transparent),
+        var(--shadow-med);
+      opacity: 1;
+      filter: none;
+      transform: translateY(-3px) scale(1.026);
+      animation: peek-source-pulse .42s ease-out 1;
+    }
+
+    .map-surface.has-peek .node:not(.is-peek-source) {
+      opacity: .14;
+      filter: saturate(.28);
+    }
+
+    .map-surface.has-peek .edge-group:not(.is-peek-related) {
+      opacity: .08;
+    }
+
+    .map-surface.has-peek .edge-group.is-peek-related {
+      opacity: .82;
     }
 
     .node.is-type-match {
@@ -17070,6 +17192,37 @@ function workMapAppHtml() {
       font-size: .6875rem;
     }
 
+    .node.evidence .node-footer {
+      margin-top: .375rem;
+      padding-top: .375rem;
+      border-top: 1px dotted color-mix(in srgb, var(--kind-color) 34%, var(--border));
+    }
+
+    .node.evidence .reference-count {
+      background: color-mix(in srgb, var(--kind-color) 9%, var(--surface-muted));
+      color: color-mix(in srgb, var(--kind-color) 82%, var(--text));
+      font-weight: 600;
+    }
+
+    .node.decision::before {
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 2px;
+      background: var(--kind-color);
+      content: '';
+      pointer-events: none;
+    }
+
+    .node.risk { border-left-width: 5px; }
+
+    .node.kanban_card .node-header {
+      margin-bottom: .5rem;
+      padding-bottom: .5rem;
+      border-bottom: 1px solid color-mix(in srgb, var(--kind-color) 28%, var(--border));
+    }
+
     .node-details-button {
       min-height: 1.5rem;
       gap: .125rem;
@@ -17153,14 +17306,13 @@ function workMapAppHtml() {
     }
 
     .focus-layer {
-      position: absolute;
-      inset: 0;
+      position: relative;
       z-index: 10;
-      display: grid;
-      place-items: center;
-      padding: 1.25rem;
-      background: color-mix(in srgb, var(--background) 58%, transparent);
-      backdrop-filter: blur(2px);
+      display: block;
+      min-width: 0;
+      min-height: 0;
+      padding: .75rem .75rem .75rem 0;
+      background: linear-gradient(90deg, color-mix(in srgb, var(--kind-color, var(--accent)) 5%, var(--background)), var(--background) 2rem);
       cursor: default;
       user-select: text;
     }
@@ -17170,14 +17322,22 @@ function workMapAppHtml() {
     .focus-card {
       display: grid;
       grid-template-rows: auto minmax(0, 1fr) auto;
-      width: min(38rem, 100%);
-      max-height: min(32rem, calc(100% - 1rem));
+      width: 100%;
+      height: 100%;
       overflow: hidden;
       border: 1px solid var(--border-strong);
       border-top: 4px solid var(--kind-color);
-      border-radius: .625rem;
+      border-radius: .5rem;
       background: var(--surface);
       box-shadow: var(--shadow-med);
+    }
+
+    .focus-card.is-entering {
+      animation: peek-enter .26s cubic-bezier(.22, .8, .28, 1) 1;
+    }
+
+    .focus-card.is-navigating {
+      animation: peek-navigate .2s ease-out 1;
     }
 
     .focus-header,
@@ -17198,6 +17358,8 @@ function workMapAppHtml() {
       margin-bottom: .5rem;
     }
 
+    .focus-title-row { min-width: 0; }
+
     .focus-header h2 {
       margin: 0;
       color: var(--text);
@@ -17206,9 +17368,17 @@ function workMapAppHtml() {
       overflow-wrap: anywhere;
     }
 
+    .focus-header-actions {
+      display: flex;
+      align-items: flex-start;
+      gap: .375rem;
+    }
+
+    .peek-navigation[hidden] { display: none; }
+
     .focus-kind-description {
       max-width: 32rem;
-      margin: .5rem 0 0;
+      margin: .25rem 0 0;
       color: var(--text-secondary);
       font-size: .75rem;
       line-height: 1.4;
@@ -17216,6 +17386,8 @@ function workMapAppHtml() {
 
     .focus-body {
       display: grid;
+      grid-auto-rows: max-content;
+      align-content: start;
       gap: 1rem;
       min-height: 0;
       overflow-y: auto;
@@ -17303,13 +17475,14 @@ function workMapAppHtml() {
       list-style: none;
     }
 
-    .relationship-list li,
+    .relationship-link,
     .reference-row {
       display: flex;
-      align-items: baseline;
+      align-items: center;
       gap: .5rem;
       min-width: 0;
       padding: .5rem .625rem;
+      border: 1px solid transparent;
       border-radius: .375rem;
       background: var(--surface-muted);
       color: var(--text-secondary);
@@ -17317,13 +17490,34 @@ function workMapAppHtml() {
       line-height: 1.4;
     }
 
-    .relationship-list li {
-      display: grid;
-      grid-template-columns: auto auto minmax(0, 1fr);
+    .relationship-link {
+      width: 100%;
+      justify-content: space-between;
+      color: var(--text);
+      text-align: left;
       overflow-wrap: anywhere;
+      cursor: pointer;
     }
 
-    .relationship-list strong { color: var(--text); font-weight: 600; }
+    .relationship-link:hover,
+    .relationship-link:focus-visible,
+    .reference-link:hover,
+    .reference-link:focus-visible {
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+    }
+
+    .relationship-path {
+      min-width: 0;
+      font-weight: 600;
+      line-height: 1.45;
+    }
+
+    .relationship-direction {
+      flex: 0 0 auto;
+      color: var(--text-secondary);
+      font-size: .6875rem;
+    }
 
     .reference-row {
       align-items: center;
@@ -17356,7 +17550,32 @@ function workMapAppHtml() {
       flex: 0 0 auto;
       min-height: 1.75rem;
       padding: 0 .5rem;
+      border: 1px solid var(--border);
+      border-radius: .375rem;
+      background: var(--surface);
+      color: var(--text);
       font-size: .75rem;
+      cursor: pointer;
+    }
+
+    .peek-status {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: .75rem;
+      line-height: 1.4;
+    }
+
+    .peek-status:empty { display: none; }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     .focus-footer {
@@ -17394,6 +17613,57 @@ function workMapAppHtml() {
       transform: translate(-50%, -50%);
     }
 
+    @keyframes edge-flow {
+      0% { stroke-dasharray: 3 13; stroke-dashoffset: 18; }
+      70% { stroke-dasharray: 8 6; }
+      100% { stroke-dasharray: none; stroke-dashoffset: 0; }
+    }
+
+    @keyframes edge-select {
+      0% { stroke-width: 1.5; opacity: .45; }
+      100% { stroke-width: 2.5; opacity: 1; }
+    }
+
+    @keyframes peek-source-pulse {
+      0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--kind-color) 42%, transparent), var(--shadow-low); }
+      100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--kind-color) 68%, transparent), var(--shadow-med); }
+    }
+
+    @keyframes peek-enter {
+      0% { opacity: .45; transform: translateX(-1.5rem) scale(.985); }
+      100% { opacity: 1; transform: translateX(0) scale(1); }
+    }
+
+    @keyframes peek-navigate {
+      0% { opacity: .55; transform: translateX(.625rem); }
+      100% { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes peek-enter-mobile {
+      0% { opacity: .5; transform: translateY(1.25rem); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .map-surface,
+      .node,
+      .edge-path {
+        transition-duration: 0s;
+      }
+
+      .edge-path,
+      .node.is-peek-source,
+      .focus-card {
+        animation: none !important;
+      }
+
+      .node:hover,
+      .node:focus-visible,
+      .node.is-selected {
+        transform: none;
+      }
+    }
+
     @media (max-width: 46rem) {
       html, body { min-height: 34rem; }
       .work-map { height: clamp(34rem, 100vh, 44rem); min-height: 34rem; }
@@ -17401,8 +17671,16 @@ function workMapAppHtml() {
       .filters { grid-column: 1 / -1; grid-row: 2; }
       .toolbar-actions { grid-column: 2; grid-row: 1; }
       .node { width: 17.75rem; }
-      .focus-layer { padding: .625rem; }
-      .focus-card { max-height: calc(100% - .25rem); }
+      .map-surface.has-peek { grid-template-columns: minmax(0, 1fr); }
+      .focus-layer {
+        position: absolute;
+        inset: auto 0 0;
+        height: min(82%, 34rem);
+        padding: .5rem;
+        background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--background) 92%, transparent) 2.5rem);
+      }
+      .focus-card { height: 100%; }
+      .focus-card.is-entering { animation-name: peek-enter-mobile; }
       .focus-footer { align-items: stretch; flex-direction: column; }
       .focus-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .action-button { padding-inline: .375rem; }
@@ -17436,15 +17714,11 @@ function workMapAppHtml() {
         </div>
       </div>
       <div class="toolbar-actions" aria-label="Map actions">
-        <button id="reset-view" class="icon-button" type="button" title="Reset view" aria-label="Reset map view">
-          <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/><path d="M10 7h4M7 10v4M17 10v4M10 17h4"/></svg>
+        <button id="go-to-start" class="icon-button" type="button" title="Go to start" aria-label="Go to start">
+          <svg viewBox="0 0 24 24"><path d="M5 3v18M5 5h11l3 4-3 4H5"/><circle cx="5" cy="21" r="1"/></svg>
         </button>
         <button id="fit-view" class="icon-button" type="button" title="Fit all nodes" aria-label="Fit all nodes">
           <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
-        </button>
-        <button id="pip-mode" class="icon-button" type="button" title="Pin map" aria-label="Pin map" aria-pressed="false" hidden>
-          <svg data-pip-icon="pin" viewBox="0 0 24 24"><path d="M12 17v5M5 3h14M6 3v6a3 3 0 0 1-3 3v2h18v-2a3 3 0 0 1-3-3V3"/></svg>
-          <svg data-pip-icon="inline" viewBox="0 0 24 24" hidden><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3M8 12h8"/></svg>
         </button>
         <button id="fullscreen-mode" class="icon-button" type="button" title="Open fullscreen" aria-label="Open fullscreen" aria-pressed="false" hidden>
           <svg data-fullscreen-icon="enter" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
@@ -17454,43 +17728,57 @@ function workMapAppHtml() {
       </div>
     </header>
 
-    <section id="canvas" class="canvas" aria-label="Interactive node map">
-      <div id="world" class="world">
-        <svg id="edges" class="edges" aria-hidden="true"></svg>
-        <div id="nodes" class="nodes"></div>
-      </div>
+    <section id="map-surface" class="map-surface" aria-label="Interactive work map">
+      <div id="canvas" class="canvas" aria-label="Node map. Use Tab to reach nodes and relationships, arrow keys to move between nodes, Enter to select, and D to peek.">
+        <div id="world" class="world">
+          <div id="nodes" class="nodes"></div>
+          <svg id="edges" class="edges" role="group" aria-label="Map relationships"></svg>
+        </div>
 
-      <div class="viewport-actions" aria-label="Viewport controls">
-        <button id="zoom-out" class="icon-button" type="button" title="Zoom out" aria-label="Zoom out">
-          <svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>
-        </button>
-        <span id="zoom-value" class="zoom-value">100%</span>
-        <button id="zoom-in" class="icon-button" type="button" title="Zoom in" aria-label="Zoom in">
-          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-        </button>
+        <div class="viewport-actions" aria-label="Viewport controls">
+          <button id="zoom-out" class="icon-button" type="button" title="Zoom out" aria-label="Zoom out">
+            <svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>
+          </button>
+          <span id="zoom-value" class="zoom-value">100%</span>
+          <button id="zoom-in" class="icon-button" type="button" title="Zoom in" aria-label="Zoom in">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        </div>
+        <div id="minimap" class="minimap" role="application" aria-label="Map overview. Click or drag to navigate." hidden>
+          <svg id="minimap-svg" preserveAspectRatio="none" aria-hidden="true">
+            <g id="minimap-content"></g>
+            <rect id="minimap-viewport" class="mini-viewport" rx="18"></rect>
+          </svg>
+        </div>
+        <div id="empty" class="empty">Ask the agent to present a work map. Claims, evidence, decisions, risks, actions, and their relationships will appear here.</div>
+        <p id="map-live" class="sr-only" role="status" aria-live="polite"></p>
+        <div id="kind-tooltip" class="kind-tooltip" role="tooltip" hidden></div>
       </div>
-      <div id="minimap" class="minimap" role="application" aria-label="Map overview. Click or drag to navigate." hidden>
-        <svg id="minimap-svg" preserveAspectRatio="none" aria-hidden="true">
-          <g id="minimap-content"></g>
-          <rect id="minimap-viewport" class="mini-viewport" rx="18"></rect>
-        </svg>
-      </div>
-      <div id="empty" class="empty">Ask the agent to present a work map. Claims, evidence, decisions, risks, actions, and their relationships will appear here.</div>
 
       <div id="focus-layer" class="focus-layer" hidden>
-        <article id="focus-card" class="focus-card claim" role="dialog" aria-modal="true" aria-labelledby="focus-title">
+        <article id="focus-card" class="focus-card claim" role="dialog" aria-modal="false" aria-labelledby="focus-title" tabindex="-1">
           <header class="focus-header">
             <div>
               <div class="focus-eyebrow">
                 <span id="focus-kind" class="kind-label">Claim</span>
                 <span id="focus-origin" class="origin-label">Agent</span>
               </div>
-              <h2 id="focus-title"></h2>
-              <p id="focus-kind-description" class="focus-kind-description"></p>
+              <div class="focus-title-row">
+                <h2 id="focus-title"></h2>
+                <p id="focus-kind-description" class="focus-kind-description"></p>
+              </div>
             </div>
-            <button id="close-focus" class="icon-button" type="button" title="Close" aria-label="Close node details">
-              <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
+            <div class="focus-header-actions">
+              <button id="peek-back" class="icon-button peek-navigation" type="button" title="Back" aria-label="Back to previous node" hidden>
+                <svg viewBox="0 0 24 24"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+              </button>
+              <button id="peek-forward" class="icon-button peek-navigation" type="button" title="Forward" aria-label="Forward to next node" hidden>
+                <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </button>
+              <button id="close-focus" class="icon-button" type="button" title="Close peek" aria-label="Close node peek">
+                <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
           </header>
           <div id="focus-body" class="focus-body">
             <p id="focus-copy" class="focus-copy"></p>
@@ -17543,10 +17831,10 @@ function workMapAppHtml() {
                 Accept &amp; handoff
               </button>
             </div>
+            <p id="peek-status" class="peek-status" role="status" aria-live="polite"></p>
           </footer>
         </article>
       </div>
-      <div id="kind-tooltip" class="kind-tooltip" role="tooltip" hidden></div>
     </section>
   </main>
 
@@ -17558,6 +17846,8 @@ function workMapAppHtml() {
     const MAX_ZOOM = 1.6;
     const MIN_READABLE_ZOOM = .64;
     const nodeKindDescriptions = ${nodeKindDescriptions};
+    const nodeKindIcons = ${nodeKindIcons};
+    const mapSurface = document.getElementById('map-surface');
     const canvas = document.getElementById('canvas');
     const world = document.getElementById('world');
     const edgesElement = document.getElementById('edges');
@@ -17578,17 +17868,23 @@ function workMapAppHtml() {
     const minimapViewport = document.getElementById('minimap-viewport');
     const focusLayer = document.getElementById('focus-layer');
     const focusCard = document.getElementById('focus-card');
-    const pipModeButton = document.getElementById('pip-mode');
     const fullscreenModeButton = document.getElementById('fullscreen-mode');
     const displayModeStatus = document.getElementById('display-mode-status');
     const kindTooltip = document.getElementById('kind-tooltip');
+    const mapLive = document.getElementById('map-live');
+    const peekStatus = document.getElementById('peek-status');
     const initId = 'play-agent-init-' + Math.random().toString(36).slice(2);
 
     let snapshot = null;
     let renderedSnapshotId = null;
     let transform = {x: 0, y: 0, scale: 1};
     let selectedNodeId = null;
+    let selectedEdgeId = null;
+    let previewNodeId = null;
     let detailNodeId = null;
+    let detailBackHistory = [];
+    let detailForwardHistory = [];
+    let detailReturnFocus = null;
     let dragState = null;
     let nodePositions = new Map();
     let highlightedKinds = new Set();
@@ -17596,9 +17892,10 @@ function workMapAppHtml() {
     let minimapDragging = false;
     let currentDisplayMode = null;
     let hostContext = null;
-    let fullscreenReturnMode = 'inline';
     let displayModeRequestPending = false;
     let displayModeStatusTimer = null;
+    let viewportResizeFrame = null;
+    let observedCanvasSize = {width: 0, height: 0};
 
     function sendHostMessage(message) {
       if (window.parent && window.parent !== window) window.parent.postMessage(message, '*');
@@ -17611,7 +17908,7 @@ function workMapAppHtml() {
       params: {
         protocolVersion: '2026-01-26',
         appInfo: {name: 'play-agent-work-map', title: 'Play Agent Work Map', version: '0.1.6'},
-        appCapabilities: {availableDisplayModes: ['inline', 'pip', 'fullscreen']},
+        appCapabilities: {availableDisplayModes: ['inline', 'fullscreen']},
       },
     });
 
@@ -17627,6 +17924,11 @@ function workMapAppHtml() {
 
     function kindDescription(kind) {
       return nodeKindDescriptions[kind] || 'A semantic element in this work map.';
+    }
+
+    function kindIcon(kind) {
+      const icon = nodeKindIcons[kind] || '';
+      return '<svg class="kind-icon" viewBox="0 0 24 24" aria-hidden="true">' + icon + '</svg>';
     }
 
     function showKindTooltip(badge) {
@@ -17666,18 +17968,58 @@ function workMapAppHtml() {
       return reference.label && location !== reference.label ? location : '';
     }
 
-    function scheduleViewForDisplayMode() {
-      if (!snapshot) return;
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          if (currentDisplayMode === 'inline') initialView();
-          else fitView();
-        });
-      });
+    function announce(message) {
+      mapLive.textContent = '';
+      requestAnimationFrame(function () { mapLive.textContent = message; });
     }
 
+    function isModalPeek() {
+      return window.matchMedia('(max-width: 46rem)').matches;
+    }
+
+    function updatePeekMode() {
+      focusCard.setAttribute('aria-modal', String(isModalPeek()));
+    }
+
+    function focusableElements(container) {
+      return Array.from(container.querySelectorAll('button:not([hidden]):not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+        .filter(function (element) { return element.getClientRects().length > 0; });
+    }
+
+    function scheduleViewForDisplayMode() {
+      if (!snapshot) return;
+      observedCanvasSize = {width: 0, height: 0};
+      scheduleViewForCanvasSize();
+    }
+
+    function refreshViewForCanvasSize() {
+      viewportResizeFrame = null;
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.round(rect.width);
+      const height = Math.round(rect.height);
+      if (!snapshot || width < 1 || height < 1) return;
+      if (observedCanvasSize.width === width && observedCanvasSize.height === height) return;
+      observedCanvasSize = {width: width, height: height};
+      updatePeekMode();
+      if (detailNodeId) {
+        const detailNode = nodeById(detailNodeId);
+        if (detailNode) ensureNodeVisible(detailNode);
+        return;
+      }
+      if (currentDisplayMode === 'inline') initialView();
+      else fitView();
+    }
+
+    function scheduleViewForCanvasSize() {
+      if (viewportResizeFrame !== null) cancelAnimationFrame(viewportResizeFrame);
+      viewportResizeFrame = requestAnimationFrame(refreshViewForCanvasSize);
+    }
+
+    const canvasResizeObserver = new ResizeObserver(scheduleViewForCanvasSize);
+    canvasResizeObserver.observe(canvas);
+
     function isDisplayMode(value) {
-      return value === 'inline' || value === 'pip' || value === 'fullscreen';
+      return value === 'inline' || value === 'fullscreen';
     }
 
     function mergeHostContext(nextContext) {
@@ -17706,42 +18048,28 @@ function workMapAppHtml() {
       const bridge = window.openai;
       const nextMode = isDisplayMode(hostContext?.displayMode) ? hostContext.displayMode : 'inline';
       const modeChanged = currentDisplayMode !== nextMode;
-      if (modeChanged && nextMode === 'fullscreen' && currentDisplayMode !== 'fullscreen') {
-        fullscreenReturnMode = currentDisplayMode === 'pip' ? 'pip' : 'inline';
-      } else if (modeChanged && nextMode !== 'fullscreen') {
-        fullscreenReturnMode = nextMode === 'pip' ? 'pip' : 'inline';
-      }
       currentDisplayMode = nextMode;
       document.documentElement.dataset.displayMode = nextMode;
 
       const hasRequestApi = typeof bridge?.requestDisplayMode === 'function';
-      const pipSupported = hasRequestApi && supportsDisplayMode('pip');
       const fullscreenSupported = hasRequestApi && supportsDisplayMode('fullscreen');
-      pipModeButton.hidden = !pipSupported || nextMode === 'fullscreen';
       fullscreenModeButton.hidden = !fullscreenSupported;
-      if (!hasRequestApi) return;
-
-      const pip = nextMode === 'pip';
       const fullscreen = nextMode === 'fullscreen';
-      const pipLabel = pip ? 'Return inline' : 'Pin map';
-      const fullscreenLabel = fullscreen
-        ? (fullscreenReturnMode === 'pip' ? 'Return to picture-in-picture' : 'Exit fullscreen')
-        : 'Open fullscreen';
-
-      pipModeButton.title = pipLabel;
-      pipModeButton.setAttribute('aria-label', pipLabel);
-      pipModeButton.setAttribute('aria-pressed', String(pip));
-      pipModeButton.querySelector('[data-pip-icon="pin"]').hidden = pip;
-      pipModeButton.querySelector('[data-pip-icon="inline"]').hidden = !pip;
-      pipModeButton.disabled = displayModeRequestPending;
-
-      fullscreenModeButton.title = fullscreenLabel;
-      fullscreenModeButton.setAttribute('aria-label', fullscreenLabel);
-      fullscreenModeButton.setAttribute('aria-pressed', String(fullscreen));
-      fullscreenModeButton.querySelector('[data-fullscreen-icon="enter"]').hidden = fullscreen;
-      fullscreenModeButton.querySelector('[data-fullscreen-icon="exit"]').hidden = !fullscreen;
-      fullscreenModeButton.disabled = displayModeRequestPending;
+      if (hasRequestApi) {
+        const fullscreenLabel = fullscreen ? 'Exit fullscreen' : 'Open fullscreen';
+        fullscreenModeButton.title = fullscreenLabel;
+        fullscreenModeButton.setAttribute('aria-label', fullscreenLabel);
+        fullscreenModeButton.setAttribute('aria-pressed', String(fullscreen));
+        fullscreenModeButton.querySelector('[data-fullscreen-icon="enter"]').hidden = fullscreen;
+        fullscreenModeButton.querySelector('[data-fullscreen-icon="exit"]').hidden = !fullscreen;
+        fullscreenModeButton.disabled = displayModeRequestPending;
+      }
       if (modeChanged) scheduleViewForDisplayMode();
+    }
+
+    function notifyInlineHeight() {
+      if (currentDisplayMode !== 'inline') return;
+      window.openai?.notifyIntrinsicHeight?.();
     }
 
     async function requestDisplayMode(nextMode) {
@@ -17770,12 +18098,8 @@ function workMapAppHtml() {
       }
     }
 
-    function togglePipMode() {
-      return requestDisplayMode(currentDisplayMode === 'pip' ? 'inline' : 'pip');
-    }
-
     function toggleFullscreenMode() {
-      return requestDisplayMode(currentDisplayMode === 'fullscreen' ? fullscreenReturnMode : 'fullscreen');
+      return requestDisplayMode(currentDisplayMode === 'fullscreen' ? 'inline' : 'fullscreen');
     }
 
     function findSnapshot(value) {
@@ -17882,23 +18206,43 @@ function workMapAppHtml() {
       return {path: path, labelPosition: {x: (start.x + end.x) / 2, y: (start.y + end.y) / 2}};
     }
 
+    function edgeId(edge) {
+      return edge.from + '::' + edge.relation + '::' + edge.to;
+    }
+
+    function edgePhrase(edge) {
+      const from = nodeById(edge.from);
+      const to = nodeById(edge.to);
+      return (from?.title || edge.from) + ' \u2192 ' + displayLabel(edge.relation) + ' \u2192 ' + (to?.title || edge.to);
+    }
+
     function renderEdges(graph) {
       const svgParts = [
-        '<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M 0 0 L 8 4 L 0 8 z" fill="var(--edge)"></path></marker></defs>',
+        '<defs>' +
+          '<marker id="arrow" markerWidth="6.5" markerHeight="6.5" refX="6" refY="3.25" orient="auto" markerUnits="userSpaceOnUse"><path d="M 0 0 L 6.5 3.25 L 0 6.5 z" fill="var(--edge)"></path></marker>' +
+          '<marker id="arrow-accent" markerWidth="6.5" markerHeight="6.5" refX="6" refY="3.25" orient="auto" markerUnits="userSpaceOnUse"><path d="M 0 0 L 6.5 3.25 L 0 6.5 z" fill="var(--accent)"></path></marker>' +
+        '</defs>',
       ];
-      graph.edges.forEach(function (edge) {
-        const related = selectedNodeId && (edge.from === selectedNodeId || edge.to === selectedNodeId);
-        const muted = selectedNodeId && !related;
+      graph.edges.slice().sort(function (a, b) {
+        return Number(edgeId(a) === selectedEdgeId) - Number(edgeId(b) === selectedEdgeId);
+      }).forEach(function (edge) {
+        const id = edgeId(edge);
+        const selected = selectedEdgeId === id;
+        const related = selected || Boolean(selectedNodeId && (edge.from === selectedNodeId || edge.to === selectedNodeId));
+        const preview = Boolean(previewNodeId && (edge.from === previewNodeId || edge.to === previewNodeId));
+        const muted = selectedEdgeId ? !selected : Boolean(selectedNodeId && !related);
         const from = nodeById(edge.from);
         const to = nodeById(edge.to);
         const typeContext = highlightedKinds.size > 0 &&
           !highlightedKinds.has(from?.kind) && !highlightedKinds.has(to?.kind);
+        const phrase = edgePhrase(edge);
         const label = displayLabel(edge.relation);
-        const labelWidth = Math.max(54, label.length * 7 + 16);
+        const labelWidth = Math.max(54, label.length * 7 + 18);
         const geometry = edgeGeometry(edge);
         svgParts.push(
-          '<g class="edge-group' + (related ? ' is-related' : '') + (muted ? ' is-muted' : '') + (typeContext ? ' is-type-context' : '') + '">' +
+          '<g class="edge-group' + (selected ? ' is-selected' : '') + (related ? ' is-related' : '') + (preview ? ' is-preview' : '') + (muted ? ' is-muted' : '') + (typeContext ? ' is-type-context' : '') + '" tabindex="0" role="button" data-edge-id="' + escapeHtml(id) + '" data-from="' + escapeHtml(edge.from) + '" data-to="' + escapeHtml(edge.to) + '" aria-label="' + escapeHtml('Relationship: ' + phrase) + '">' +
             '<path class="edge-path" d="' + geometry.path + '"></path>' +
+            '<path class="edge-hit" d="' + geometry.path + '"></path>' +
             '<rect class="edge-label-bg" x="' + (geometry.labelPosition.x - labelWidth / 2) + '" y="' + (geometry.labelPosition.y - 10) + '" width="' + labelWidth + '" height="20" rx="10"></rect>' +
             '<text class="edge-label" x="' + geometry.labelPosition.x + '" y="' + (geometry.labelPosition.y + 4) + '">' + escapeHtml(label) + '</text>' +
           '</g>',
@@ -17958,13 +18302,18 @@ function workMapAppHtml() {
       if (!snapshot) return;
       const graph = visibleGraph();
       const relatedIds = relatedNodeIds(selectedNodeId);
-
+      const selectedEdge = graph.edges.find(function (edge) { return edgeId(edge) === selectedEdgeId; });
+      const edgeNodeIds = selectedEdge ? new Set([selectedEdge.from, selectedEdge.to]) : new Set();
       nodesElement.innerHTML = graph.nodes.map(function (node) {
         const position = nodePosition(node);
         const selected = selectedNodeId === node.id ? ' is-selected' : '';
-        const relationshipState = !selectedNodeId || selected
-          ? ''
-          : relatedIds.has(node.id) ? ' is-related' : ' is-muted';
+        const peekSource = detailNodeId === node.id ? ' is-peek-source' : '';
+        const entry = snapshot.entryNodeId === node.id;
+        const relationshipState = selectedEdgeId
+          ? edgeNodeIds.has(node.id) ? ' is-related' : ' is-muted'
+          : !selectedNodeId || selected
+            ? ''
+            : relatedIds.has(node.id) ? ' is-related' : ' is-muted';
         const typeState = highlightedKinds.size === 0
           ? ''
           : highlightedKinds.has(node.kind) ? ' is-type-match' : ' is-type-context';
@@ -17975,11 +18324,11 @@ function workMapAppHtml() {
           ? '<div class="confidence-note ' + (node.confidence === 'low' ? 'low' : '') + '"><span>' + escapeHtml(node.uncertaintyReasons[0]) + '</span></div>'
           : '';
         const uncertaintyClass = firstUncertainty ? ' has-uncertainty' : '';
-        const accessibleLabel = 'Select node: ' + node.title + '. Type: ' + displayLabel(node.kind) + '. ' + kindDescription(node.kind);
-        return '<article class="node ' + escapeHtml(node.kind) + selected + relationshipState + typeState + uncertaintyClass + '" tabindex="0" data-node-id="' + escapeHtml(node.id) + '" data-origin="' + escapeHtml(node.origin) + '" aria-label="' + escapeHtml(accessibleLabel) + '" style="left:' + position.x + 'px;top:' + position.y + 'px">' +
-          '<div class="node-header"><span class="kind-label" data-kind="' + escapeHtml(node.kind) + '">' + escapeHtml(displayLabel(node.kind)) + '</span>' + confidenceBadge(node) + '<span class="origin-label origin-' + escapeHtml(node.origin) + '">' + escapeHtml(displayLabel(node.origin)) + '</span></div>' +
+        const accessibleLabel = (entry ? 'Recommended starting point. ' : '') + 'Select node: ' + node.title + '. Type: ' + displayLabel(node.kind) + '. ' + kindDescription(node.kind);
+        return '<article class="node ' + escapeHtml(node.kind) + selected + peekSource + relationshipState + typeState + uncertaintyClass + '" tabindex="0" data-node-id="' + escapeHtml(node.id) + '" data-kind="' + escapeHtml(node.kind) + '" data-origin="' + escapeHtml(node.origin) + '" aria-label="' + escapeHtml(accessibleLabel) + '" style="left:' + position.x + 'px;top:' + position.y + 'px">' +
+          '<div class="node-header"><span class="kind-label" data-kind="' + escapeHtml(node.kind) + '">' + kindIcon(node.kind) + '<span>' + escapeHtml(displayLabel(node.kind)) + '</span></span>' + confidenceBadge(node) + '<span class="origin-label origin-' + escapeHtml(node.origin) + '">' + escapeHtml(displayLabel(node.origin)) + '</span></div>' +
           '<div class="node-copy"><h2>' + escapeHtml(node.title) + '</h2><p>' + escapeHtml(node.body) + '</p>' + firstUncertainty + '</div>' +
-          '<div class="node-footer">' + references + '<button class="node-details-button" type="button" data-details-id="' + escapeHtml(node.id) + '">Details<svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button></div>' +
+          '<div class="node-footer">' + references + '<button class="node-details-button" type="button" data-details-id="' + escapeHtml(node.id) + '" aria-label="Peek at ' + escapeHtml(node.title) + '">Peek<svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button></div>' +
         '</article>';
       }).join('');
 
@@ -18013,6 +18362,7 @@ function workMapAppHtml() {
       if (!nodes.length) return;
       const bounds = graphBounds(nodes);
       const rect = canvas.getBoundingClientRect();
+      if (rect.width < 1 || rect.height < 1) return;
       const scale = Math.min(1, (rect.width - 32) / bounds.width, (rect.height - 32) / bounds.height);
       transform.scale = Math.max(MIN_ZOOM, scale);
       transform.x = (rect.width - bounds.width * transform.scale) / 2 - bounds.x * transform.scale;
@@ -18023,28 +18373,17 @@ function workMapAppHtml() {
     function fittedScale(nodes) {
       const bounds = graphBounds(nodes);
       const rect = canvas.getBoundingClientRect();
+      if (rect.width < 1 || rect.height < 1) return 0;
       return Math.min(1, (rect.width - 32) / bounds.width, (rect.height - 32) / bounds.height);
     }
 
-    function overviewAnchor(nodes) {
-      const ids = new Set(nodes.map(function (node) { return node.id; }));
-      const incoming = new Map(nodes.map(function (node) { return [node.id, 0]; }));
-      const degree = new Map(nodes.map(function (node) { return [node.id, 0]; }));
-      (snapshot?.edges || []).forEach(function (edge) {
-        if (!ids.has(edge.from) || !ids.has(edge.to)) return;
-        incoming.set(edge.to, (incoming.get(edge.to) || 0) + 1);
-        degree.set(edge.from, (degree.get(edge.from) || 0) + 1);
-        degree.set(edge.to, (degree.get(edge.to) || 0) + 1);
-      });
-      return [...nodes].sort(function (left, right) {
-        const leftScore = (degree.get(left.id) || 0) * 10 + (incoming.get(left.id) === 0 ? 2 : 0);
-        const rightScore = (degree.get(right.id) || 0) * 10 + (incoming.get(right.id) === 0 ? 2 : 0);
-        return rightScore - leftScore;
-      })[0] || nodes[0];
+    function entryNode(nodes) {
+      return nodes.find(function (node) { return node.id === snapshot.entryNodeId; });
     }
 
     function centerReadable(node, scale) {
       const rect = canvas.getBoundingClientRect();
+      if (rect.width < 1 || rect.height < 1) return;
       const position = nodePosition(node);
       transform.scale = scale;
       transform.x = rect.width * (rect.width <= VERTICAL_GRAPH_BREAKPOINT ? .5 : .34) - (position.x + NODE_WIDTH / 2) * scale;
@@ -18052,10 +18391,43 @@ function workMapAppHtml() {
       applyTransform();
     }
 
+    function ensureNodeVisible(node) {
+      const rect = canvas.getBoundingClientRect();
+      const position = nodePosition(node);
+      const margin = 28;
+      const left = position.x * transform.scale + transform.x;
+      const top = position.y * transform.scale + transform.y;
+      const right = left + NODE_WIDTH * transform.scale;
+      const bottom = top + NODE_HEIGHT * transform.scale;
+      if (left < margin) transform.x += margin - left;
+      else if (right > rect.width - margin) transform.x -= right - (rect.width - margin);
+      if (top < margin) transform.y += margin - top;
+      else if (bottom > rect.height - margin) transform.y -= bottom - (rect.height - margin);
+      applyTransform();
+    }
+
+    function ensureEdgeVisible(edge) {
+      const rect = canvas.getBoundingClientRect();
+      const point = edgeGeometry(edge).labelPosition;
+      const screenX = point.x * transform.scale + transform.x;
+      const screenY = point.y * transform.scale + transform.y;
+      const margin = 64;
+      if (screenX < margin) transform.x += margin - screenX;
+      else if (screenX > rect.width - margin) transform.x -= screenX - (rect.width - margin);
+      if (screenY < margin) transform.y += margin - screenY;
+      else if (screenY > rect.height - margin) transform.y -= screenY - (rect.height - margin);
+      applyTransform();
+    }
+
     function readableOverview(nodes) {
       const rect = canvas.getBoundingClientRect();
       const scale = rect.width <= VERTICAL_GRAPH_BREAKPOINT ? MIN_READABLE_ZOOM : .74;
-      centerReadable(overviewAnchor(nodes), scale);
+      const entry = entryNode(nodes);
+      if (!entry) {
+        fitView();
+        return;
+      }
+      centerReadable(entry, scale);
     }
 
     function initialView() {
@@ -18068,15 +18440,25 @@ function workMapAppHtml() {
       readableOverview(nodes);
     }
 
-    function resetView() {
+    function goToStart() {
       if (!snapshot) return;
-      focusLayer.hidden = true;
-      detailNodeId = null;
+      closeFocus(false);
       selectedNodeId = null;
+      selectedEdgeId = null;
+      previewNodeId = null;
+      searchElement.value = '';
       nodePositions = globalPositions();
       updateMeta();
       renderGraph();
-      requestAnimationFrame(initialView);
+      requestAnimationFrame(function () {
+        const start = entryNode(snapshot.nodes);
+        if (!start) return;
+        centerReadable(start, canvas.getBoundingClientRect().width <= VERTICAL_GRAPH_BREAKPOINT ? MIN_READABLE_ZOOM : .74);
+        requestAnimationFrame(function () {
+          nodesElement.querySelector('[data-node-id="' + CSS.escape(start.id) + '"]')?.focus();
+          announce('Moved to start: ' + start.title);
+        });
+      });
     }
 
     function setZoom(nextScale, anchorX, anchorY) {
@@ -18107,10 +18489,40 @@ function workMapAppHtml() {
       return snapshot?.nodes.find(function (node) { return node.id === id; });
     }
 
-    function renderFocus(node) {
+    function markPeekSource(nodeId) {
+      nodesElement.querySelectorAll('.node.is-peek-source').forEach(function (element) {
+        element.classList.remove('is-peek-source');
+      });
+      edgesElement.querySelectorAll('.edge-group').forEach(function (element) {
+        const connected = Boolean(nodeId && (
+          element.getAttribute('data-from') === nodeId ||
+          element.getAttribute('data-to') === nodeId
+        ));
+        element.classList.toggle('is-peek-related', connected);
+      });
+      if (!nodeId) return;
+      nodesElement.querySelector('[data-node-id="' + CSS.escape(nodeId) + '"]')?.classList.add('is-peek-source');
+    }
+
+    function renderFocus(node, options) {
+      const settings = options || {};
+      const wasOpen = !focusLayer.hidden;
+      if (settings.pushHistory && detailNodeId && detailNodeId !== node.id) {
+        detailBackHistory.push(detailNodeId);
+        detailForwardHistory = [];
+      }
+      if (!wasOpen) {
+        detailBackHistory = [];
+        detailForwardHistory = [];
+        detailReturnFocus = settings.returnFocus || document.activeElement;
+      }
       detailNodeId = node.id;
       focusCard.className = 'focus-card ' + node.kind;
-      document.getElementById('focus-kind').textContent = displayLabel(node.kind);
+      void focusCard.offsetWidth;
+      focusCard.classList.add(wasOpen ? 'is-navigating' : 'is-entering');
+      focusLayer.className = 'focus-layer ' + node.kind;
+      markPeekSource(node.id);
+      document.getElementById('focus-kind').innerHTML = kindIcon(node.kind) + '<span>' + escapeHtml(displayLabel(node.kind)) + '</span>';
       document.getElementById('focus-kind-description').textContent = kindDescription(node.kind);
       const origin = document.getElementById('focus-origin');
       origin.className = 'origin-label origin-' + node.origin;
@@ -18143,19 +18555,26 @@ function workMapAppHtml() {
       document.getElementById('relationship-list').innerHTML = relationships.map(function (edge) {
         const outgoing = edge.from === node.id;
         const neighbor = nodeById(outgoing ? edge.to : edge.from);
-        return '<li><span>' + (outgoing ? 'Outgoing' : 'Incoming') + '</span><strong>' + escapeHtml(displayLabel(edge.relation)) + '</strong><span>' + escapeHtml(neighbor?.title || (outgoing ? edge.to : edge.from)) + '</span></li>';
+        const phrase = edgePhrase(edge);
+        return '<li><button class="relationship-link" type="button" data-related-node-id="' + escapeHtml(neighbor?.id || (outgoing ? edge.to : edge.from)) + '">' +
+          '<span class="relationship-path">' + escapeHtml(phrase) + '</span>' +
+          '<span class="relationship-direction">' + (outgoing ? 'Outgoing' : 'Incoming') + ' \u203A</span>' +
+        '</button></li>';
       }).join('');
 
       const references = node.references || [];
       const referenceSection = document.getElementById('reference-section');
       referenceSection.hidden = references.length === 0;
       document.getElementById('reference-list').innerHTML = references.map(function (reference, index) {
-        const open = reference.uri && typeof window.openai?.openExternal === 'function'
-          ? '<button class="reference-link" type="button" data-reference-index="' + index + '">Open</button>'
-          : '';
+        let action = '';
+        if (reference.uri && typeof window.openai?.openExternal === 'function') {
+          action = '<button class="reference-link" type="button" data-reference-index="' + index + '" data-reference-action="open">Open source</button>';
+        } else if ((reference.path || reference.locator) && typeof window.openai?.sendFollowUpMessage === 'function') {
+          action = '<button class="reference-link" type="button" data-reference-index="' + index + '" data-reference-action="inspect">Inspect source</button>';
+        }
         const detail = referenceDetail(reference);
         return '<div class="reference-row"><span><strong>' + escapeHtml(referenceLabel(reference)) + '</strong>' +
-          (detail ? '<code>' + escapeHtml(detail) + '</code>' : '') + '</span>' + open + '</div>';
+          (detail ? '<code>' + escapeHtml(detail) + '</code>' : '') + '</span>' + action + '</div>';
       }).join('');
 
       const actionsAvailable = typeof window.openai?.sendFollowUpMessage === 'function';
@@ -18167,21 +18586,95 @@ function workMapAppHtml() {
       document.querySelectorAll('.standard-action').forEach(function (button) {
         button.hidden = node.origin === 'reviewer';
       });
+      peekStatus.textContent = '';
+      document.getElementById('peek-back').hidden = detailBackHistory.length === 0;
+      document.getElementById('peek-forward').hidden = detailForwardHistory.length === 0;
+      updatePeekMode();
+      mapSurface.classList.add('has-peek');
       focusLayer.hidden = false;
-      document.getElementById('close-focus').focus();
+      requestAnimationFrame(function () {
+        ensureNodeVisible(node);
+        focusCard.focus({preventScroll: true});
+      });
     }
 
-    function closeFocus() {
+    function closeFocus(restoreFocus = true) {
+      if (focusLayer.hidden) return;
       focusLayer.hidden = true;
+      mapSurface.classList.remove('has-peek');
       detailNodeId = null;
+      markPeekSource(null);
+      detailBackHistory = [];
+      detailForwardHistory = [];
+      const returnFocus = detailReturnFocus;
+      detailReturnFocus = null;
+      if (restoreFocus) {
+        requestAnimationFrame(function () {
+          if (returnFocus instanceof HTMLElement && returnFocus.isConnected) {
+            returnFocus.focus();
+            return;
+          }
+          const selected = selectedNodeId && nodesElement.querySelector('[data-node-id="' + CSS.escape(selectedNodeId) + '"]');
+          if (selected instanceof HTMLElement) selected.focus();
+        });
+      }
     }
 
     function selectNode(node) {
-      focusLayer.hidden = true;
-      detailNodeId = null;
       selectedNodeId = selectedNodeId === node.id ? null : node.id;
+      selectedEdgeId = null;
+      previewNodeId = null;
       updateMeta();
       renderGraph();
+      requestAnimationFrame(function () {
+        nodesElement.querySelector('[data-node-id="' + CSS.escape(node.id) + '"]')?.focus();
+      });
+      announce(selectedNodeId
+        ? 'Selected ' + node.title + '. ' + Math.max(0, relatedNodeIds(node.id).size - 1) + ' related nodes highlighted.'
+        : 'Node selection cleared.');
+    }
+
+    function showNodePeek(node, returnFocus) {
+      renderFocus(node, {
+        pushHistory: !focusLayer.hidden,
+        returnFocus: returnFocus,
+      });
+    }
+
+    function activateNode(node, returnFocus) {
+      if (!focusLayer.hidden) {
+        showNodePeek(node, returnFocus);
+        announce('Peek showing ' + node.title);
+        return;
+      }
+      selectNode(node);
+    }
+
+    function selectEdge(edge) {
+      const id = edgeId(edge);
+      selectedEdgeId = selectedEdgeId === id ? null : id;
+      selectedNodeId = null;
+      previewNodeId = null;
+      updateMeta();
+      renderGraph();
+      if (selectedEdgeId) {
+        requestAnimationFrame(function () {
+          ensureEdgeVisible(edge);
+          edgesElement.querySelector('[data-edge-id="' + CSS.escape(id) + '"]')?.focus();
+        });
+        announce('Selected relationship: ' + edgePhrase(edge));
+      } else {
+        announce('Relationship selection cleared.');
+      }
+    }
+
+    function inspectReferencePrompt(reference, node) {
+      const location = referenceLocation(reference);
+      const locationKind = reference.path ? 'workspace path' : 'locator';
+      return 'Work map: ' + snapshot.title +
+        '\\nNode [' + displayLabel(node.kind) + ']: ' + node.title +
+        '\\nReference (' + locationKind + '): ' + location +
+        '\\n\\nOpen and inspect this exact reference. Verify whether it supports the node as written, quote or summarize the relevant material, and report any mismatch, stale location, or missing context. Do not treat the work-map claim itself as verification.';
     }
 
     function followUpPrompt(action, node) {
@@ -18211,7 +18704,7 @@ function workMapAppHtml() {
       typeFilterMenu.innerHTML = kinds.map(function (kind) {
         return '<label class="type-filter-option ' + escapeHtml(kind) + '">' +
           '<input type="checkbox" value="' + escapeHtml(kind) + '"' + (highlightedKinds.has(kind) ? ' checked' : '') + ' />' +
-          '<i></i><span class="type-filter-label">' + escapeHtml(displayLabel(kind)) + '</span><small>' + counts.get(kind) + '</small>' +
+          '<span class="type-filter-icon">' + kindIcon(kind) + '</span><span class="type-filter-label">' + escapeHtml(displayLabel(kind)) + '</span><small>' + counts.get(kind) + '</small>' +
           '<span class="type-filter-description">' + escapeHtml(kindDescription(kind)) + '</span>' +
         '</label>';
       }).join('') + '<button id="clear-types" class="clear-types" type="button">Clear highlights</button>';
@@ -18249,7 +18742,14 @@ function workMapAppHtml() {
       snapshot = nextSnapshot;
       renderedSnapshotId = nextSnapshot.id || null;
       selectedNodeId = null;
+      selectedEdgeId = null;
+      previewNodeId = null;
       detailNodeId = null;
+      detailBackHistory = [];
+      detailForwardHistory = [];
+      detailReturnFocus = null;
+      mapSurface.classList.remove('has-peek');
+      focusLayer.hidden = true;
       highlightedKinds = new Set();
       nodePositions = globalPositions();
       titleElement.textContent = nextSnapshot.title || 'Work Map';
@@ -18259,73 +18759,214 @@ function workMapAppHtml() {
       renderFilters();
       renderGraph();
       requestAnimationFrame(initialView);
-      window.openai?.notifyIntrinsicHeight?.();
+      notifyInlineHeight();
     }
 
     function refreshGraph() {
-      focusLayer.hidden = true;
-      detailNodeId = null;
+      closeFocus(false);
       selectedNodeId = null;
+      selectedEdgeId = null;
+      previewNodeId = null;
       nodePositions = globalPositions();
       updateMeta();
       renderGraph();
       requestAnimationFrame(fitView);
     }
 
+    function focusDirectionalNode(currentNode, key) {
+      const currentPosition = nodePosition(currentNode);
+      const currentCenter = {
+        x: currentPosition.x + NODE_WIDTH / 2,
+        y: currentPosition.y + NODE_HEIGHT / 2,
+      };
+      const candidates = visibleNodes().filter(function (candidate) {
+        if (candidate.id === currentNode.id) return false;
+        const position = nodePosition(candidate);
+        const dx = position.x + NODE_WIDTH / 2 - currentCenter.x;
+        const dy = position.y + NODE_HEIGHT / 2 - currentCenter.y;
+        if (key === 'ArrowRight') return dx > 0 && Math.abs(dy) <= Math.abs(dx) * 1.75;
+        if (key === 'ArrowLeft') return dx < 0 && Math.abs(dy) <= Math.abs(dx) * 1.75;
+        if (key === 'ArrowDown') return dy > 0 && Math.abs(dx) <= Math.abs(dy) * 1.75;
+        return dy < 0 && Math.abs(dx) <= Math.abs(dy) * 1.75;
+      });
+      candidates.sort(function (a, b) {
+        const aPosition = nodePosition(a);
+        const bPosition = nodePosition(b);
+        const aDistance = Math.hypot(aPosition.x - currentPosition.x, aPosition.y - currentPosition.y);
+        const bDistance = Math.hypot(bPosition.x - currentPosition.x, bPosition.y - currentPosition.y);
+        return aDistance - bDistance;
+      });
+      const next = candidates[0];
+      if (!next) return;
+      const element = nodesElement.querySelector('[data-node-id="' + CSS.escape(next.id) + '"]');
+      if (!(element instanceof HTMLElement)) return;
+      ensureNodeVisible(next);
+      element.focus();
+      announce('Focused ' + next.title);
+    }
+
+    function setNodePreview(nodeId) {
+      const nextId = selectedNodeId || selectedEdgeId ? null : nodeId;
+      if (previewNodeId === nextId) return;
+      previewNodeId = nextId;
+      edgesElement.querySelectorAll('.edge-group').forEach(function (edgeElement) {
+        const preview = Boolean(nextId && (
+          edgeElement.getAttribute('data-from') === nextId ||
+          edgeElement.getAttribute('data-to') === nextId
+        ));
+        edgeElement.classList.toggle('is-preview', preview);
+      });
+    }
+
     nodesElement.addEventListener('click', function (event) {
       const detailsButton = event.target.closest('[data-details-id]');
       if (detailsButton) {
         const detailNode = nodeById(detailsButton.getAttribute('data-details-id'));
-        if (detailNode) renderFocus(detailNode);
+        if (detailNode) showNodePeek(detailNode, detailsButton);
         return;
       }
       const element = event.target.closest('[data-node-id]');
       if (!element) return;
       const node = nodeById(element.getAttribute('data-node-id'));
-      if (node) selectNode(node);
+      if (node) activateNode(node, element);
     });
     nodesElement.addEventListener('pointerover', function (event) {
+      const node = event.target.closest('.node');
+      if (node && !node.contains(event.relatedTarget)) {
+        setNodePreview(node.getAttribute('data-node-id'));
+      }
       const badge = event.target.closest('.kind-label[data-kind]');
       if (badge) showKindTooltip(badge);
     });
     nodesElement.addEventListener('pointerout', function (event) {
+      const node = event.target.closest('.node');
+      if (node && !node.contains(event.relatedTarget)) {
+        setNodePreview(null);
+      }
       if (event.target.closest('.kind-label[data-kind]')) hideKindTooltip();
     });
     nodesElement.addEventListener('focusin', function (event) {
       const node = event.target.closest('.node');
-      const badge = node?.querySelector('.kind-label[data-kind]');
-      if (badge) showKindTooltip(badge);
+      const focusedNode = node && nodeById(node.getAttribute('data-node-id'));
+      if (focusedNode) {
+        ensureNodeVisible(focusedNode);
+        setNodePreview(focusedNode.id);
+      }
     });
-    nodesElement.addEventListener('focusout', hideKindTooltip);
+    nodesElement.addEventListener('focusout', function (event) {
+      const node = event.target.closest('.node');
+      if (node && !node.contains(event.relatedTarget)) setNodePreview(null);
+      hideKindTooltip();
+    });
 
     nodesElement.addEventListener('keydown', function (event) {
       if (event.target.closest('[data-details-id]')) return;
-      if (event.key !== 'Enter' && event.key !== ' ') return;
       const element = event.target.closest('[data-node-id]');
       if (!element) return;
-      event.preventDefault();
       const node = nodeById(element.getAttribute('data-node-id'));
-      if (node) selectNode(node);
+      if (!node) return;
+      if (['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'].includes(event.key)) {
+        event.preventDefault();
+        focusDirectionalNode(node, event.key);
+        return;
+      }
+      if (event.key.toLowerCase() === 'd') {
+        event.preventDefault();
+        renderFocus(node, {returnFocus: element});
+        return;
+      }
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        activateNode(node, element);
+      }
+    });
+
+    edgesElement.addEventListener('click', function (event) {
+      const element = event.target.closest('[data-edge-id]');
+      if (!element) return;
+      const edge = snapshot?.edges.find(function (candidate) {
+        return edgeId(candidate) === element.getAttribute('data-edge-id');
+      });
+      if (edge) selectEdge(edge);
+    });
+    edgesElement.addEventListener('keydown', function (event) {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const element = event.target.closest('[data-edge-id]');
+      if (!element) return;
+      event.preventDefault();
+      const edge = snapshot?.edges.find(function (candidate) {
+        return edgeId(candidate) === element.getAttribute('data-edge-id');
+      });
+      if (edge) selectEdge(edge);
     });
 
     focusLayer.addEventListener('click', function (event) {
       if (event.target === focusLayer) closeFocus();
+      const relationshipButton = event.target.closest('[data-related-node-id]');
+      if (relationshipButton) {
+        const relatedNode = nodeById(relationshipButton.getAttribute('data-related-node-id'));
+        if (relatedNode) renderFocus(relatedNode, {pushHistory: true});
+        return;
+      }
       const referenceButton = event.target.closest('[data-reference-index]');
       if (referenceButton && detailNodeId) {
         const reference = nodeById(detailNodeId)?.references?.[Number(referenceButton.getAttribute('data-reference-index'))];
-        if (reference?.uri && typeof window.openai?.openExternal === 'function') {
+        const action = referenceButton.getAttribute('data-reference-action');
+        if (action === 'open' && reference?.uri && typeof window.openai?.openExternal === 'function') {
           window.openai.openExternal({href: reference.uri, redirectUrl: false});
+          announce('Opened source: ' + referenceLabel(reference));
         }
+        if (action === 'inspect' && reference && typeof window.openai?.sendFollowUpMessage === 'function') {
+          const node = nodeById(detailNodeId);
+          if (node) {
+            window.openai.sendFollowUpMessage({prompt: inspectReferencePrompt(reference, node), scrollToBottom: true});
+            peekStatus.textContent = 'Sent source inspection to Codex.';
+          }
+        }
+        return;
       }
       const actionButton = event.target.closest('[data-action]');
       if (actionButton && detailNodeId && typeof window.openai?.sendFollowUpMessage === 'function') {
         const node = nodeById(detailNodeId);
-        if (node) window.openai.sendFollowUpMessage({prompt: followUpPrompt(actionButton.getAttribute('data-action'), node), scrollToBottom: true});
+        if (node) {
+          window.openai.sendFollowUpMessage({prompt: followUpPrompt(actionButton.getAttribute('data-action'), node), scrollToBottom: true});
+          peekStatus.textContent = 'Sent follow-up to Codex.';
+        }
       }
     });
 
     document.getElementById('close-focus').addEventListener('click', closeFocus);
+    document.getElementById('peek-back').addEventListener('click', function () {
+      const previousId = detailBackHistory.pop();
+      const previous = previousId && nodeById(previousId);
+      if (previous && detailNodeId) {
+        detailForwardHistory.push(detailNodeId);
+        renderFocus(previous);
+      }
+    });
+    document.getElementById('peek-forward').addEventListener('click', function () {
+      const nextId = detailForwardHistory.pop();
+      const next = nextId && nodeById(nextId);
+      if (next && detailNodeId) {
+        detailBackHistory.push(detailNodeId);
+        renderFocus(next);
+      }
+    });
     document.addEventListener('keydown', function (event) {
+      if (event.key === 'Tab' && !focusLayer.hidden && isModalPeek()) {
+        const focusables = focusableElements(focusCard);
+        if (!focusables.length) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === focusCard)) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+        return;
+      }
       if (event.key !== 'Escape') return;
       if (!typeFilterMenu.hidden) {
         setTypeMenuOpen(false);
@@ -18333,10 +18974,13 @@ function workMapAppHtml() {
         return;
       }
       if (!focusLayer.hidden) closeFocus();
-      else if (selectedNodeId) {
+      else if (selectedNodeId || selectedEdgeId) {
         selectedNodeId = null;
+        selectedEdgeId = null;
+        previewNodeId = null;
         updateMeta();
         renderGraph();
+        announce('Map selection cleared.');
       }
     });
     searchElement.addEventListener('input', refreshGraph);
@@ -18362,8 +19006,7 @@ function workMapAppHtml() {
       if (!typeFilter.contains(event.target)) setTypeMenuOpen(false);
     });
     document.getElementById('fit-view').addEventListener('click', fitView);
-    document.getElementById('reset-view').addEventListener('click', resetView);
-    pipModeButton.addEventListener('click', togglePipMode);
+    document.getElementById('go-to-start').addEventListener('click', goToStart);
     fullscreenModeButton.addEventListener('click', toggleFullscreenMode);
     document.getElementById('zoom-in').addEventListener('click', function () {
       const rect = canvas.getBoundingClientRect();
@@ -18375,7 +19018,7 @@ function workMapAppHtml() {
     });
 
     canvas.addEventListener('wheel', function (event) {
-      if (!focusLayer.hidden || event.target.closest('.minimap')) return;
+      if (event.target.closest('.minimap')) return;
       if (!isZoomGesture(event)) return;
       event.preventDefault();
       const rect = canvas.getBoundingClientRect();
@@ -18384,7 +19027,7 @@ function workMapAppHtml() {
     }, {passive: false});
 
     canvas.addEventListener('pointerdown', function (event) {
-      if (!focusLayer.hidden || event.target.closest('.node, .viewport-actions, .minimap')) return;
+      if (event.target.closest('.node, .edge-group, .viewport-actions, .minimap')) return;
       dragState = {pointerId: event.pointerId, x: event.clientX, y: event.clientY, originX: transform.x, originY: transform.y};
       canvas.setPointerCapture(event.pointerId);
       canvas.classList.add('is-dragging');
@@ -18421,11 +19064,6 @@ function workMapAppHtml() {
     });
     minimapElement.addEventListener('pointercancel', function () {
       minimapDragging = false;
-    });
-
-    window.addEventListener('resize', function () {
-      if (currentDisplayMode === 'inline') initialView();
-      else fitView();
     });
 
     function renderFromOpenAiBridge() {
@@ -18529,6 +19167,7 @@ var presentWorkMapInputSchema = external_exports.object({
   title: external_exports.string().min(1),
   authorRole: external_exports.enum(workMapAuthorRoles),
   reviewOf: external_exports.string().min(1).optional(),
+  entryNodeId: nodeIdSchema,
   nodes: external_exports.array(workMapNodeSchema).min(1).max(24),
   edges: external_exports.array(workMapEdgeSchema).max(48)
 }).strict().superRefine((input, context) => {
@@ -18539,6 +19178,13 @@ var presentWorkMapInputSchema = external_exports.object({
     }
     nodeIds.add(node.id);
   });
+  if (!nodeIds.has(input.entryNodeId)) {
+    context.addIssue({
+      code: "custom",
+      message: `Unknown entry node: ${input.entryNodeId}`,
+      path: ["entryNodeId"]
+    });
+  }
   const edgeKeys = /* @__PURE__ */ new Set();
   const adjacency = new Map(input.nodes.map((node) => [node.id, /* @__PURE__ */ new Set()]));
   input.edges.forEach((edge, index) => {
@@ -18600,7 +19246,7 @@ var referenceJsonSchema = {
 var toolInputSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["title", "authorRole", "nodes", "edges"],
+  required: ["title", "authorRole", "entryNodeId", "nodes", "edges"],
   properties: {
     title: { type: "string", description: "Short title for this reviewable work map." },
     authorRole: {
@@ -18611,6 +19257,12 @@ var toolInputSchema = {
     reviewOf: {
       type: "string",
       description: "Optional checkpoint, task, answer, or artifact identifier that this reviewer map evaluates."
+    },
+    entryNodeId: {
+      type: "string",
+      pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+      maxLength: 64,
+      description: "ID of the node users should inspect first. It must reference an existing node and is explicitly authored; Play Agent never infers it."
     },
     nodes: {
       type: "array",
@@ -18700,12 +19352,13 @@ var workMapOutputSchema = {
     snapshot: {
       type: "object",
       additionalProperties: false,
-      required: ["id", "title", "authorRole", "nodes", "edges", "layout"],
+      required: ["id", "title", "authorRole", "entryNodeId", "nodes", "edges", "layout"],
       properties: {
         id: { type: "string" },
         title: { type: "string" },
         authorRole: { type: "string", enum: workMapAuthorRoles },
         reviewOf: { type: "string" },
+        entryNodeId: { type: "string" },
         nodes: {
           type: "array",
           items: {
@@ -18776,7 +19429,7 @@ function listToolsResult() {
       {
         name: "present_work_map",
         title: "Present Work Map",
-        description: "Present a compact, connected semantic graph for a substantial answer or independent review. Supply explicit nodes, provenance, references, and directed relationships; Play Agent validates and renders the graph without storing or inferring state.",
+        description: "Present a compact, connected semantic graph for a substantial answer or independent review. Supply an explicit reading entry, nodes, provenance, references, and directed relationships; Play Agent validates and renders the graph without storing or inferring state.",
         inputSchema: toolInputSchema,
         outputSchema: workMapOutputSchema,
         annotations: {
